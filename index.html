@@ -268,6 +268,16 @@
     border-radius: 8px; line-height: 1.5; overflow-x: auto;
   }
   .exprogress { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+
+  /* ---- split layout: calculator stays put, exercises scroll (only when there is room) ---- */
+  :root { --split-gap: 16px; --split-pad: 16px; }
+  html.split, html.split body { height: 100%; overflow: hidden; }
+  html.split .wrap { height: 100%; display: flex; flex-direction: column; padding-bottom: var(--split-pad); }
+  html.split .wrap > * { flex: 0 0 auto; }
+  html.split .exercises {
+    flex: 1 1 auto; min-height: 0; margin-top: var(--split-gap);
+    overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  }
 </style>
 </head>
 <body>
@@ -954,6 +964,33 @@
     c.closest(".ex").classList.toggle("done", c.checked);
     save();
   });
+})();
+
+(() => {
+  // Split layout: when the viewport has room for the whole calculator plus a useful slice of
+  // the exercises, keep the calculator in place and scroll only the exercises. Otherwise
+  // (phones, short windows) the page scrolls normally.
+  const MIN_EX = 120; // smallest exercises area, in px, worth pinning the calculator for
+  const root = document.documentElement;
+  const panel = document.querySelector(".panel");
+  const px = (v) => parseFloat(v) || 0;
+  let raf = 0;
+  function update() {
+    raf = 0;
+    const cs = getComputedStyle(root);
+    const panelBottom = panel.getBoundingClientRect().bottom + window.scrollY;
+    const room = window.innerHeight - panelBottom - px(cs.paddingBottom)
+      - px(cs.getPropertyValue("--split-gap")) - px(cs.getPropertyValue("--split-pad"));
+    root.classList.toggle("split", room >= MIN_EX);
+  }
+  const schedule = () => { if (!raf) raf = requestAnimationFrame(update); };
+  window.addEventListener("resize", schedule);
+  if ("ResizeObserver" in window) {
+    const ro = new ResizeObserver(schedule);
+    for (const el of document.querySelectorAll("header.app, .controls, .panel")) ro.observe(el);
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  update();
 })();
 
 (() => {
