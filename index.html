@@ -223,7 +223,9 @@
 
   /* ---- exercises ---- */
   .exercises { margin-top: 28px; }
-  .exercises h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .exhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 4px; }
+  .exercises h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .exercises.collapsed .excontent { display: none; }
   .exercises .lede { color: var(--muted); font-size: 12px; margin: 0 0 14px; max-width: 70ch; }
   .exgroup {
     background: var(--surface); border: 1px solid var(--key-border);
@@ -252,14 +254,14 @@
   .extask { font-size: 13px; line-height: 1.5; }
   .ex.done .extask { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
   .exacts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
-  .exload {
+  .exload, .extoggle {
     appearance: none; font: inherit; font-size: 12px; cursor: pointer;
     border: 1px solid var(--key-border); background: var(--key-op); color: var(--ink);
     border-radius: 6px; padding: 3px 9px;
   }
   .exload small { color: var(--muted); margin-left: 6px; font-size: 10px; }
-  .exload:hover { border-color: var(--accent); }
-  .exload:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .exload:hover, .extoggle:hover { border-color: var(--accent); }
+  .exload:focus-visible, .extoggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .exans { font-size: 12px; }
   .exans > summary { cursor: pointer; color: var(--accent); list-style: none; padding: 3px 0; }
   .exans > summary::-webkit-details-marker { display: none; }
@@ -276,6 +278,10 @@
   html.split .wrap > * { flex: 0 0 auto; }
   html.split .exercises {
     flex: 1 1 auto; min-height: 0; margin-top: var(--split-gap);
+    display: flex; flex-direction: column;
+  }
+  html.split .excontent {
+    flex: 1 1 auto; min-height: 0;
     overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
   }
 </style>
@@ -326,9 +332,14 @@
   </section>
 
   <section class="exercises" aria-labelledby="exh">
-    <h2 id="exh">Exercises — <span id="excount"></span></h2>
+    <div class="exhead">
+      <h2 id="exh">Exercises — <span id="excount"></span></h2>
+      <button type="button" class="extoggle" id="exToggle" aria-expanded="true" aria-controls="excontent">hide</button>
+    </div>
+    <div class="excontent" id="excontent">
     <p class="lede">Work through each group in order. Every function on the keypad is covered at least once; the capstones chain them together the way real register, encoding and decoding problems do. Press <b>load</b> to set the calculator to the starting value and width, then open <b>answer</b> to check. Ticks are saved on this device.</p>
     <div id="exercises"></div>
+    </div>
   </section>
 </div>
 
@@ -951,6 +962,27 @@
   }
   document.getElementById("excount").textContent = n + " exercises";
 
+  // Hide / show the exercises (e.g. once they are all done). Remembered on this device.
+  const section = root.closest(".exercises");
+  const toggle = document.getElementById("exToggle");
+  const HIDE_KEY = "pc-exercises-hidden";
+  const applyHidden = (hidden) => {
+    section.classList.toggle("collapsed", hidden);
+    toggle.textContent = hidden ? "show" : "hide";
+    toggle.setAttribute("aria-expanded", String(!hidden));
+    window.dispatchEvent(new Event("pc-layout"));
+  };
+  let hidden = false;
+  try { hidden = localStorage.getItem(HIDE_KEY) === "1"; } catch (_) {}
+  applyHidden(hidden);
+  toggle.addEventListener("click", () => {
+    hidden = !hidden;
+    applyHidden(hidden);
+    try { localStorage.setItem(HIDE_KEY, hidden ? "1" : "0"); } catch (_) {}
+  });
+  // Enter normally means "=" in the calculator; on this button let it activate the button instead.
+  toggle.addEventListener("keydown", (e) => { if (e.key === "Enter") e.stopPropagation(); });
+
   root.addEventListener("click", (e) => {
     const b = e.target.closest(".exload");
     if (!b || !window.pcLoad) return;
@@ -973,6 +1005,7 @@
   const MIN_EX = 120; // smallest exercises area, in px, worth pinning the calculator for
   const root = document.documentElement;
   const panel = document.querySelector(".panel");
+  const exercises = document.querySelector(".exercises");
   const px = (v) => parseFloat(v) || 0;
   let raf = 0;
   function update() {
@@ -981,10 +1014,12 @@
     const panelBottom = panel.getBoundingClientRect().bottom + window.scrollY;
     const room = window.innerHeight - panelBottom - px(cs.paddingBottom)
       - px(cs.getPropertyValue("--split-gap")) - px(cs.getPropertyValue("--split-pad"));
-    root.classList.toggle("split", room >= MIN_EX);
+    const hidden = exercises.classList.contains("collapsed");
+    root.classList.toggle("split", !hidden && room >= MIN_EX);
   }
   const schedule = () => { if (!raf) raf = requestAnimationFrame(update); };
   window.addEventListener("resize", schedule);
+  window.addEventListener("pc-layout", schedule);
   if ("ResizeObserver" in window) {
     const ro = new ResizeObserver(schedule);
     for (const el of document.querySelectorAll("header.app, .controls, .panel")) ro.observe(el);

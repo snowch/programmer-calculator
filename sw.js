@@ -1,5 +1,5 @@
 // Programmer Calculator service worker — bump VERSION whenever index.html changes.
-const VERSION = "pc-v2";
+const VERSION = "pc-v3";
 const CORE = ["./", "./index.html", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./icon-192-maskable.png", "./icon-512-maskable.png"];
 
