@@ -930,8 +930,8 @@
     ["Load 2014 at 16-bit and look at the char row. What character has code point U+2014?", "The em dash —. Its UTF-8 is E2 80 94 (three bytes), UTF-16 is just 2014.", L("2014",16)],
   ]],
   ["Word size, wrap-around and truncation", "The width selector is the single most important control: it is the register size of the machine you are pretending to be.", [
-    ["8-bit: 255 + 1 = ?", "0 — the carry out of bit 7 falls off the end of the word and lights the C flag, exactly as the carry flag in hardware would.", L("FF",8)],
-    ["8-bit: 0 − 1 = ?", "FF (255 unsigned). Borrow wraps the same way carry does, and sets C too.", L("0",8)],
+    ["8-bit: 255 + 1 = ?", "0 — the carry out of bit 7 falls off the end of the word and lights the C flag, exactly as the carry flag in hardware would. Z lights too: the eight bits that survive are all zero.", L("FF",8)],
+    ["8-bit: 0 − 1 = ?", "FF (255 unsigned). Borrow wraps the same way carry does, and sets C too; N lights because bit 7 is now set.", L("0",8)],
     ["16-bit: FFFF × 2 = ?", "FFFE — 131070 mod 65536 = 65534.", L("FFFF",16)],
     ["Load 1234 5678 at 32-bit, then switch to 16, then 8. What survives each time?", "5678, then 78. Narrowing the width keeps only the low bits — exactly what a C cast to a smaller integer type does.", L("12345678",32)],
     ["Write down the largest unsigned value at 8, 16, 32 and 64 bits, in HEX and DEC. Verify with NOT 0 at each width.", "FF = 255 · FFFF = 65535 · FFFF FFFF = 4294967295 · FFFF FFFF FFFF FFFF = 18446744073709551615"],
@@ -941,7 +941,7 @@
   ]],
   ["Signed numbers and two's complement", "Switch to <b>signed</b>. Nothing about the bits changes — only how DEC interprets the top bit.", [
     ["8-bit signed: click DEC, enter 1, press NEG. What is HEX?", "FF — all ones is −1 in two's complement at every width.", L("1",8,true)],
-    ["8-bit signed: 127 + 1 = ?", "80 = −128. Signed overflow: the sum spilled into the sign bit, so V lights while C stays clear.", L("7F",8,true)],
+    ["8-bit signed: 127 + 1 = ?", "80 = −128. Signed overflow: the sum spilled into the sign bit, so V lights (and N, since bit 7 is set) while C stays clear.", L("7F",8,true)],
     ["8-bit signed: load 80 (−128) and press NEG.", "Still 80 = −128. −128 has no positive partner in 8 bits; this is the classic INT_MIN edge case.", L("80",8,true)],
     ["Do two's complement by hand: 8-bit, load 25 (37). Press NOT, then + 1. Compare with NEG 25.", "NOT gives DA, +1 gives DB. NEG 25 is also DB = −37. NEG ≡ NOT then +1.", L("25",8,true)],
     ["16-bit signed: load 8000 then 7FFF. Read DEC each time.", "−32768 and 32767 — the two ends of int16_t.", L("8000",16,true)],
