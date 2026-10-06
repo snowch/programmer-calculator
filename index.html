@@ -351,8 +351,8 @@
         <span class="flagk">flags</span>
         <span class="flag" data-flag="C" title="Carry / borrow: the unsigned result did not fit the word">C</span>
         <span class="flag" data-flag="V" title="Overflow: the signed result did not fit the word">V</span>
-        <span class="flag" data-flag="Z" title="Zero: the value is 0">Z</span>
-        <span class="flag" data-flag="N" title="Negative: the top bit is set">N</span>
+        <span class="flag" data-flag="Z" title="Zero: the last result was 0">Z</span>
+        <span class="flag" data-flag="N" title="Negative: the last result has its top bit set">N</span>
       </div>
       <div class="ascii" id="ascii"></div>
     </div>
@@ -400,7 +400,7 @@
   let stack = [];           // open parentheses: [{acc, op}, ...]
   let fresh = true;
   let error = null;
-  let flagC = false, flagV = false;   // carry/borrow and overflow from the operation that produced `value`
+  let flags = { C: false, V: false, Z: false, N: false };   // status of the operation that produced `value`
 
   const BIG = (n) => BigInt(n);
   const mask = () => (1n << BIG(width)) - 1n;
@@ -409,7 +409,8 @@
   const toSigned = (v) => (v & signBit()) ? v - (mask() + 1n) : v;
   const fitsSigned = (s) => s >= -signBit() && s < signBit();
   const bit = (v, i) => i >= 0n && i < BIG(width) && ((v >> i) & 1n) === 1n;
-  const clearFlags = () => { flagC = false; flagV = false; };
+  const clearFlags = () => { flags = { C: false, V: false, Z: false, N: false }; };
+  const setFlags = (c, v, r) => { flags = { C: c, V: v, Z: r === 0n, N: bit(r, BIG(width - 1)) }; };
 
   // ---------- formatting ----------
   function group(s, n, sep) {
@@ -434,11 +435,12 @@
                      add:"+", sub:"−", mul:"×", div:"÷", mod:"mod" };
   function apply(a, o, b) {
     const r = compute(a, o, b);
-    [flagC, flagV] = binaryFlags(a, o, b);
+    setFlags(...binaryFlags(a, o, b), r);
     return r;
   }
   // Flags the way a CPU sets them: C when the unsigned result wrapped (for shifts, the last bit
-  // shifted out), V when the signed result wrapped. Logic ops clear both.
+  // shifted out), V when the signed result wrapped; logic ops clear both. Z and N come from the
+  // result itself. Nothing is set until an operation runs, and AC clears everything.
   function binaryFlags(a, o, b) {
     const sa = toSigned(a), sb = toSigned(b), w = BIG(width);
     switch (o) {
@@ -562,7 +564,7 @@
     if (error) clearAll();
     const v = value;
     value = clamp(UNARY[name](v));
-    [flagC, flagV] = unaryFlags(name, v);
+    setFlags(...unaryFlags(name, v), value);
     fresh = true;
     render();
   }
@@ -755,12 +757,11 @@
     }
     asciiEl.innerHTML = "ascii <b>" + chars.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</b>";
     document.getElementById("uniInfo").innerHTML = unicodeInfo();
-    const flagState = { C: flagC, V: flagV, Z: value === 0n, N: bit(value, BIG(width - 1)) };
     for (const el of flagsEl.children) {
       const f = el.dataset.flag;
       if (!f) continue;
-      el.classList.toggle("on", flagState[f]);
-      el.setAttribute("aria-label", f + (flagState[f] ? " set" : " clear"));
+      el.classList.toggle("on", flags[f]);
+      el.setAttribute("aria-label", f + (flags[f] ? " set" : " clear"));
     }
     for (const btn of bitsEl.querySelectorAll(".bit")) {
       const i = BIG(btn.dataset.bit);
