@@ -160,6 +160,8 @@
   }
   .pending .err { color: var(--danger); }
   .rows { display: grid; gap: 6px; }
+  .rows.cols3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rows.cols3 .baserow[data-base="2"] { grid-column: 1 / -1; }
   .baserow {
     display: grid; grid-template-columns: 44px minmax(0,1fr) 30px;
     align-items: center; gap: 10px; background: var(--surface-2);
@@ -439,7 +441,7 @@
   </div>
   <div class="helpbody">
     <h3>The display</h3>
-    <p>The four rows show one value in hex, decimal, octal and binary. Tap a row to type in that base; the highlighted row is the one you are typing into, and digits that do not exist in that base are greyed out. The ⧉ icon copies the value with a 0x, 0o or 0b prefix.</p>
+    <p>The HEX, DEC, OCT and BIN readouts show one value four ways. Tap one to type in that base; the highlighted readout is the one you are typing into, and digits that do not exist in that base are greyed out. The ⧉ icon copies the value with a 0x, 0o or 0b prefix.</p>
     <p><b>8 · 16 · 32 · 64</b> sets the word size, and every result wraps to that many bits. <b>unsigned / signed</b> changes how the decimal row reads the same bits: signed uses two's complement, and ÷, mod and right shifts become arithmetic.</p>
     <p>Tap any bit in the bit grid to flip it. The <b>ascii</b> line shows each byte as a character, and the <b>char</b> box loads a character's code point and shows its UTF-8 and UTF-16 encodings.</p>
 
@@ -830,6 +832,33 @@
     return s.trim();
   }
 
+  // HEX, DEC and OCT share one row when the longest value the current width can show fits
+  // three abreast; otherwise they stack. Based on the maximum, not the current value, so the
+  // layout does not jump while typing.
+  const ROW_CHROME = 116;   // tag column, copy icon, gaps, padding and border of a .baserow
+  const ROW_GAP = 6;
+  function longestValueChars() {
+    const m = mask();
+    const dec = signed ? "-" + signBit().toString(10) : m.toString(10);
+    return Math.max(fmt(m, 16).length, dec.length, fmt(m, 8).length);
+  }
+  function layoutRows() {
+    const probe = rowsEl.querySelector('.baserow[data-base="16"] .val');
+    if (!probe || !probe.textContent) return;
+    const range = document.createRange();
+    range.selectNodeContents(probe);
+    const cw = range.getBoundingClientRect().width / probe.textContent.length || 10;
+    const needed = Math.ceil(longestValueChars() * cw) + ROW_CHROME;
+    rowsEl.classList.toggle("cols3", rowsEl.clientWidth >= 3 * needed + 2 * ROW_GAP);
+  }
+  if ("ResizeObserver" in window) {
+    let lastW = 0;
+    new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      if (w !== lastW) { lastW = w; layoutRows(); }
+    }).observe(rowsEl);
+  }
+
   function render() {
     for (const row of rowsEl.children) {
       const b = Number(row.dataset.base);
@@ -869,6 +898,7 @@
       if (area === "rp") k.disabled = stack.length === 0;
       if (OP_LABEL[area]) k.dataset.held = (op === area && fresh) ? "1" : "0";
     }
+    layoutRows();
   }
 
   // ---------- unicode ----------
