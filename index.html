@@ -81,11 +81,25 @@
   }
   .wrap { max-width: 1020px; margin: 0 auto; padding: 20px 16px 40px; }
   header.app {
-    display: flex; align-items: baseline; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title btns" "hint hint";
+    align-items: baseline; column-gap: 12px; row-gap: 6px; margin-bottom: 14px;
   }
-  header.app h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; margin: 0; }
-  header.app .hint { color: var(--muted); font-size: 12px; }
+  header.app h1 { grid-area: title; font-size: 15px; font-weight: 600; letter-spacing: 0.02em; margin: 0; }
+  header.app .hint { grid-area: hint; color: var(--muted); font-size: 12px; }
+  .hdrbtns { grid-area: btns; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
+  @media (min-width: 820px) {
+    header.app { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "title hint btns"; }
+    header.app .hint { text-align: right; }
+  }
+  .themebtn {
+    appearance: none; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap;
+    border: 1px solid var(--key-border); background: var(--surface); color: var(--ink);
+    border-radius: 999px; padding: 4px 11px;
+  }
+  .themebtn .themek { color: var(--muted); }
+  .themebtn:hover { border-color: var(--accent); }
+  .themebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
   .seg {
@@ -293,7 +307,10 @@
   <header class="app">
     <h1>Programmer Calculator</h1>
     <span class="hint">keyboard: 0–9 a–f ( ) &amp; | ^ ~ &lt; &gt; + − * / % ⏎ ⌫ esc</span>
-    <button type="button" class="install" id="installBtn">install app</button>
+    <div class="hdrbtns">
+      <button type="button" class="install" id="installBtn">install app</button>
+      <button type="button" class="themebtn" id="themeBtn"><span class="themek">theme</span> <span id="themeVal">auto</span></button>
+    </div>
   </header>
 
   <div class="controls">
@@ -306,11 +323,6 @@
     <div class="seg" id="signSeg" role="group" aria-label="Sign mode">
       <button data-s="0" class="on">unsigned</button>
       <button data-s="1">signed</button>
-    </div>
-    <div class="seg" id="themeSeg" role="group" aria-label="Theme">
-      <button data-t="auto" class="on">auto</button>
-      <button data-t="light">light</button>
-      <button data-t="dark">dark</button>
     </div>
   </div>
 
@@ -752,10 +764,28 @@
   }
   segWire("widthSeg", "w", setWidth);
   segWire("signSeg", "s", (s) => { signed = s === "1"; render(); });
-  segWire("themeSeg", "t", (t) => {
-    if (t === "auto") delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = t;
+  // Theme: a compact button that cycles auto → light → dark. Remembered on this device.
+  const THEMES = ["auto", "light", "dark"];
+  const themeBtn = document.getElementById("themeBtn");
+  const themeVal = document.getElementById("themeVal");
+  let theme = "auto";
+  try { const t = localStorage.getItem("pc-theme"); if (THEMES.includes(t)) theme = t; } catch (_) {}
+  function applyTheme() {
+    if (theme === "auto") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+    const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+    themeVal.textContent = theme;
+    themeBtn.setAttribute("aria-label", `Theme: ${theme}. Activate to switch to ${next}.`);
+    themeBtn.title = `Theme: ${theme} (tap for ${next})`;
+  }
+  themeBtn.addEventListener("click", () => {
+    theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+    try { localStorage.setItem("pc-theme", theme); } catch (_) {}
+    applyTheme();
   });
+  // Enter normally means "=" in the calculator; on this button let it activate the button instead.
+  themeBtn.addEventListener("keydown", (e) => { if (e.key === "Enter") e.stopPropagation(); });
+  applyTheme();
 
   // ---------- keyboard ----------
   document.addEventListener("keydown", (e) => {
