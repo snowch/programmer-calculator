@@ -1,7 +1,7 @@
 # Programmer Calculator
 
 An offline-first programmer calculator that installs as an app on Android, iOS and desktop.
-Hex / dec / oct / bin, bitwise ops, shifts, rotates, byte swaps, Unicode lookup, and a set of
+Hex / dec / oct / bin, bitwise ops, shifts, rotates, byte swaps, CPU-style C/V/Z/N flags, Unicode lookup, and a set of
 digital-design exercises with progress saved on the device.
 
 **Live app:** https://snowch.github.io/programmer-calculator/

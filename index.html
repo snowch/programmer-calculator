@@ -153,10 +153,22 @@
     cursor: pointer; font-size: 13px; padding: 4px; border-radius: 6px; justify-self: end;
   }
   .copy:hover { color: var(--accent); }
+  .meta {
+    margin-top: 8px; padding: 0 4px; display: flex; justify-content: space-between;
+    align-items: center; gap: 6px 12px; flex-wrap: wrap;
+  }
   .ascii {
-    margin-top: 8px; color: var(--muted); font-size: 12px; padding: 0 4px;
+    color: var(--muted); font-size: 12px; margin-left: auto;
     text-align: right; overflow-x: auto; white-space: nowrap;
   }
+  .flags { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
+  .flags .flagk { margin-right: 2px; }
+  .flag {
+    display: inline-block; min-width: 20px; text-align: center; padding: 0 4px;
+    border: 1px solid var(--key-border); border-radius: 5px; background: var(--surface-2);
+    color: var(--muted); font-size: 11px; line-height: 16px; cursor: help;
+  }
+  .flag.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
   .ascii b { color: var(--ink); font-weight: 500; letter-spacing: 0.15em; }
   .uni {
     margin-top: 6px; color: var(--muted); font-size: 12px; padding: 0 4px;
@@ -334,7 +346,16 @@
   <section class="panel" aria-label="Value">
     <div class="pending" id="pending"></div>
     <div class="rows" id="rows"></div>
-    <div class="ascii" id="ascii"></div>
+    <div class="meta">
+      <div class="flags" id="flags" aria-label="Status flags from the last operation">
+        <span class="flagk">flags</span>
+        <span class="flag" data-flag="C" title="Carry / borrow: the unsigned result did not fit the word">C</span>
+        <span class="flag" data-flag="V" title="Overflow: the signed result did not fit the word">V</span>
+        <span class="flag" data-flag="Z" title="Zero: the value is 0">Z</span>
+        <span class="flag" data-flag="N" title="Negative: the top bit is set">N</span>
+      </div>
+      <div class="ascii" id="ascii"></div>
+    </div>
     <div class="uni">
       <label class="charin">char <input id="charIn" maxlength="4" placeholder="😀" aria-label="Type a character to load its code point"></label>
       <span id="uniInfo"></span>
@@ -379,12 +400,16 @@
   let stack = [];           // open parentheses: [{acc, op}, ...]
   let fresh = true;
   let error = null;
+  let flagC = false, flagV = false;   // carry/borrow and overflow from the operation that produced `value`
 
   const BIG = (n) => BigInt(n);
   const mask = () => (1n << BIG(width)) - 1n;
   const signBit = () => 1n << BIG(width - 1);
   const clamp = (v) => ((v % (mask() + 1n)) + mask() + 1n) & mask();
   const toSigned = (v) => (v & signBit()) ? v - (mask() + 1n) : v;
+  const fitsSigned = (s) => s >= -signBit() && s < signBit();
+  const bit = (v, i) => i >= 0n && i < BIG(width) && ((v >> i) & 1n) === 1n;
+  const clearFlags = () => { flagC = false; flagV = false; };
 
   // ---------- formatting ----------
   function group(s, n, sep) {
@@ -408,6 +433,25 @@
                      shlY:"<<", shrY:">>",
                      add:"+", sub:"−", mul:"×", div:"÷", mod:"mod" };
   function apply(a, o, b) {
+    const r = compute(a, o, b);
+    [flagC, flagV] = binaryFlags(a, o, b);
+    return r;
+  }
+  // Flags the way a CPU sets them: C when the unsigned result wrapped (for shifts, the last bit
+  // shifted out), V when the signed result wrapped. Logic ops clear both.
+  function binaryFlags(a, o, b) {
+    const sa = toSigned(a), sb = toSigned(b), w = BIG(width);
+    switch (o) {
+      case "add":  return [a + b > mask(), !fitsSigned(sa + sb)];
+      case "sub":  return [a < b, !fitsSigned(sa - sb)];
+      case "mul":  return [a * b > mask(), !fitsSigned(sa * sb)];
+      case "div":  return [false, signed && !fitsSigned(sa / sb)];
+      case "shlY": return [b >= 1n && b <= w && bit(a, w - b), b > w ? sa !== 0n : !fitsSigned(sa << b)];
+      case "shrY": return [b >= 1n && (b <= w ? bit(a, b - 1n) : signed && bit(a, w - 1n)), false];
+      default:     return [false, false];
+    }
+  }
+  function compute(a, o, b) {
     switch (o) {
       case "and": return a & b;
       case "or":  return a | b;
@@ -466,12 +510,14 @@
     if (fresh) { value = 0n; fresh = false; }
     const next = value * BIG(base) + BIG(d);
     if (next > mask()) return;
+    clearFlags();
     value = next;
     render();
   }
   function fail(e) {
     error = e.message;
     acc = null; op = null; stack = []; fresh = true;
+    clearFlags();
     render();
   }
   function setOp(o) {
@@ -514,18 +560,33 @@
   }
   function unary(name) {
     if (error) clearAll();
-    value = clamp(UNARY[name](value));
+    const v = value;
+    value = clamp(UNARY[name](v));
+    [flagC, flagV] = unaryFlags(name, v);
     fresh = true;
     render();
+  }
+  function unaryFlags(name, v) {
+    const top = bit(v, BIG(width - 1)), low = bit(v, 0n);
+    switch (name) {
+      case "neg":  return [v !== 0n, v === signBit()];          // borrow from 0 − v; −(min) does not fit
+      case "shl1": return [top, !fitsSigned(toSigned(v) << 1n)];
+      case "shr1": return [low, false];
+      case "rol":  return [top, false];                          // the bit that wrapped around
+      case "ror":  return [low, false];
+      default:     return [false, false];                        // not, flip8, flip16
+    }
   }
   function backspace() {
     if (error) { clearAll(); return; }
     if (fresh) return;
+    clearFlags();
     value = value / BIG(base);
     render();
   }
   function clearAll() {
     value = 0n; acc = null; op = null; stack = []; fresh = true; error = null;
+    clearFlags();
     render();
   }
 
@@ -534,6 +595,7 @@
   const bitsEl = document.getElementById("bits");
   const pendingEl = document.getElementById("pending");
   const asciiEl = document.getElementById("ascii");
+  const flagsEl = document.getElementById("flags");
   const opspadEl = document.getElementById("opspad");
   const hexrowEl = document.getElementById("hexrow");
   const numgridEl = document.getElementById("numgrid");
@@ -589,6 +651,7 @@
         btn.setAttribute("aria-label", "bit " + bitIndex);
         btn.addEventListener("click", () => {
           if (error) clearAll();
+          clearFlags();
           value ^= 1n << BIG(bitIndex);
           fresh = false;
           render();
@@ -692,6 +755,13 @@
     }
     asciiEl.innerHTML = "ascii <b>" + chars.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</b>";
     document.getElementById("uniInfo").innerHTML = unicodeInfo();
+    const flagState = { C: flagC, V: flagV, Z: value === 0n, N: bit(value, BIG(width - 1)) };
+    for (const el of flagsEl.children) {
+      const f = el.dataset.flag;
+      if (!f) continue;
+      el.classList.toggle("on", flagState[f]);
+      el.setAttribute("aria-label", f + (flagState[f] ? " set" : " clear"));
+    }
     for (const btn of bitsEl.querySelectorAll(".bit")) {
       const i = BIG(btn.dataset.bit);
       const on = (value >> i) & 1n;
@@ -740,6 +810,7 @@
         if (v <= (1n << BIG(w)) - 1n) { setWidth(w); break; }
       }
     }
+    clearFlags();
     value = v & mask();
     fresh = true;
     charIn.value = String.fromCodePoint(cp);
@@ -761,6 +832,7 @@
     width = Number(w);
     const seg = document.getElementById("widthSeg");
     for (const b of seg.children) b.classList.toggle("on", Number(b.dataset.w) === width);
+    clearFlags();
     value &= mask();
     if (acc !== null) acc &= mask();
     for (const f of stack) if (f.acc !== null) f.acc &= mask();
@@ -827,6 +899,7 @@
     for (const b of document.getElementById("signSeg").children)
       b.classList.toggle("on", (b.dataset.s === "1") === signed);
     acc = null; op = null; stack = []; error = null; fresh = true;
+    clearFlags();
     value = BigInt("0x" + String(hex).replace(/\s+/g, "")) & mask();
     render();
   };
@@ -856,8 +929,8 @@
     ["Load 2014 at 16-bit and look at the char row. What character has code point U+2014?", "The em dash —. Its UTF-8 is E2 80 94 (three bytes), UTF-16 is just 2014.", L("2014",16)],
   ]],
   ["Word size, wrap-around and truncation", "The width selector is the single most important control: it is the register size of the machine you are pretending to be.", [
-    ["8-bit: 255 + 1 = ?", "0 — the carry out of bit 7 falls off the end. Hardware would set a carry flag; this calculator just shows the surviving 8 bits.", L("FF",8)],
-    ["8-bit: 0 − 1 = ?", "FF (255 unsigned). Borrow wraps the same way carry does.", L("0",8)],
+    ["8-bit: 255 + 1 = ?", "0 — the carry out of bit 7 falls off the end of the word and lights the C flag, exactly as the carry flag in hardware would.", L("FF",8)],
+    ["8-bit: 0 − 1 = ?", "FF (255 unsigned). Borrow wraps the same way carry does, and sets C too.", L("0",8)],
     ["16-bit: FFFF × 2 = ?", "FFFE — 131070 mod 65536 = 65534.", L("FFFF",16)],
     ["Load 1234 5678 at 32-bit, then switch to 16, then 8. What survives each time?", "5678, then 78. Narrowing the width keeps only the low bits — exactly what a C cast to a smaller integer type does.", L("12345678",32)],
     ["Write down the largest unsigned value at 8, 16, 32 and 64 bits, in HEX and DEC. Verify with NOT 0 at each width.", "FF = 255 · FFFF = 65535 · FFFF FFFF = 4294967295 · FFFF FFFF FFFF FFFF = 18446744073709551615"],
@@ -867,7 +940,7 @@
   ]],
   ["Signed numbers and two's complement", "Switch to <b>signed</b>. Nothing about the bits changes — only how DEC interprets the top bit.", [
     ["8-bit signed: click DEC, enter 1, press NEG. What is HEX?", "FF — all ones is −1 in two's complement at every width.", L("1",8,true)],
-    ["8-bit signed: 127 + 1 = ?", "80 = −128. Signed overflow: the sum spilled into the sign bit.", L("7F",8,true)],
+    ["8-bit signed: 127 + 1 = ?", "80 = −128. Signed overflow: the sum spilled into the sign bit, so V lights while C stays clear.", L("7F",8,true)],
     ["8-bit signed: load 80 (−128) and press NEG.", "Still 80 = −128. −128 has no positive partner in 8 bits; this is the classic INT_MIN edge case.", L("80",8,true)],
     ["Do two's complement by hand: 8-bit, load 25 (37). Press NOT, then + 1. Compare with NEG 25.", "NOT gives DA, +1 gives DB. NEG 25 is also DB = −37. NEG ≡ NOT then +1.", L("25",8,true)],
     ["16-bit signed: load 8000 then 7FFF. Read DEC each time.", "−32768 and 32767 — the two ends of int16_t.", L("8000",16,true)],
@@ -962,10 +1035,10 @@
     ["A device is mapped at C000–C0FF on a 16-bit bus. Write the decode test and check C05A and C15A.", "select = (addr AND FF00) == C000. C05A → C000 ✓. C15A → C100 ✗. Address decoding is one AND and one compare.", L("C05A",16)],
     ["Split the 32-bit address 0040 2ABC into a 4 KiB page number and offset.", "Page: X>>Y C = 0040 2. Offset: AND FFF = ABC. Twelve low bits because 4096 = 2¹².", L("00402ABC",32)],
     ["Q8.8 fixed point: represent 3.25 and multiply it by 2.0.", "3.25 × 256 = 832 = 0340; 2.0 = 0200. 0340 × 0200 = 6 8000, then X>>Y 8 = 0680 = 6.5 ✓ (product has 16 fraction bits, so shift back by 8).", L("0",32)],
-    ["Internet-style ones' complement checksum at 16-bit: 1234 + F123, fold the carry, then NOT.", "1234 + F123 wraps to 0357 (carry lost). Add the carry back: 0358. NOT → FCA7. That is the checksum field of an IP header.", L("1234",16)],
+    ["Internet-style ones' complement checksum at 16-bit: 1234 + F123, fold the carry, then NOT.", "1234 + F123 wraps to 0357 with C set (the lost carry). Add the carry back: 0358. NOT → FCA7. That is the checksum field of an IP header.", L("1234",16)],
     ["Multiply 13 × 10 by shift-and-add only.", "(13 X<<Y 3) + (13 X<<Y 1) = 104 + 26 = 130 = 82. How a multiplier without a multiplier works.", L("D",8)],
     ["Write −5 in 8-bit sign-magnitude, ones' complement and two's complement.", "85 · FA · FB. Only two's complement makes add/sub work with the same adder as unsigned.", L("5",8,true)],
-    ["Carry vs overflow at 8-bit: compute 100 + 50 and 200 + 100 in unsigned and signed.", "100 + 50 = 96 → signed reads −106: overflow set, no carry. 200 + 100 = 2C: carry set (unsigned wrapped) but signed −56 + 100 = 44 is correct, no overflow. The two flags are independent.", L("64",8)],
+    ["Carry vs overflow at 8-bit: compute 100 + 50 and 200 + 100 in unsigned and signed.", "100 + 50 = 96 → signed reads −106: overflow: V set, C clear. 200 + 100 = 2C: C set (unsigned wrapped) but signed −56 + 100 = 44 is correct, so V stays clear. The two flags are independent.", L("64",8)],
     ["Decode the RISC-V instruction 0050 0093 (addi x1, x0, 5): opcode = bits 6:0, rd = 11:7, funct3 = 14:12, rs1 = 19:15, imm = 31:20.", "AND 7F = 13 (OP-IMM). (X>>Y 7) AND 1F = 1 → x1. (X>>Y C) AND 7 = 0 → ADDI. (X>>Y F) AND 1F = 0 → x0. X>>Y 14 = 005 → immediate 5. You just did what the decode stage does.", L("00500093",32)],
   ]],
   ];
