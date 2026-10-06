@@ -223,9 +223,11 @@
 
   /* ---- exercises ---- */
   .exercises { margin-top: 28px; }
-  .exhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 4px; }
+  .exhead { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; margin: 0 0 4px; }
+  .exbtns { display: flex; gap: 6px; margin-left: auto; }
   .exercises h2 { font-size: 15px; font-weight: 600; margin: 0; }
   .exercises.collapsed .excontent { display: none; }
+  .exercises:not(.showdone) .ex.done { display: none; }
   .exercises .lede { color: var(--muted); font-size: 12px; margin: 0 0 14px; max-width: 70ch; }
   .exgroup {
     background: var(--surface); border: 1px solid var(--key-border);
@@ -334,10 +336,13 @@
   <section class="exercises" aria-labelledby="exh">
     <div class="exhead">
       <h2 id="exh">Exercises — <span id="excount"></span></h2>
-      <button type="button" class="extoggle" id="exToggle" aria-expanded="true" aria-controls="excontent">hide</button>
+      <div class="exbtns">
+        <button type="button" class="extoggle" id="exDone" aria-pressed="false" hidden>show done</button>
+        <button type="button" class="extoggle" id="exToggle" aria-expanded="true" aria-controls="excontent">hide</button>
+      </div>
     </div>
     <div class="excontent" id="excontent">
-    <p class="lede">Work through each group in order. Every function on the keypad is covered at least once; the capstones chain them together the way real register, encoding and decoding problems do. Press <b>load</b> to set the calculator to the starting value and width, then open <b>answer</b> to check. Ticks are saved on this device.</p>
+    <p class="lede">Work through each group in order. Every function on the keypad is covered at least once; the capstones chain them together the way real register, encoding and decoding problems do. Press <b>load</b> to set the calculator to the starting value and width, then open <b>answer</b> to check. Ticks are saved on this device, and a ticked exercise is tucked away until you press <b>show done</b>.</p>
     <div id="exercises"></div>
     </div>
   </section>
@@ -938,6 +943,7 @@
   let done = {};
   try { done = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (_) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (_) {} };
+  const groups = [];
 
   for (const [title, intro, items] of G) {
     const det = document.createElement("details");
@@ -946,6 +952,7 @@
     det.innerHTML = `<summary><span>${title}</span><span class="exrange">${first}–${last}</span></summary>` +
       (intro ? `<p class="exintro">${intro}</p>` : "") + `<ol start="${first}"></ol>`;
     const ol = det.querySelector("ol");
+    groups.push({ first, last, range: det.querySelector(".exrange") });
     for (const [task, answer, load] of items) {
       n++;
       const li = document.createElement("li");
@@ -980,8 +987,37 @@
     applyHidden(hidden);
     try { localStorage.setItem(HIDE_KEY, hidden ? "1" : "0"); } catch (_) {}
   });
-  // Enter normally means "=" in the calculator; on this button let it activate the button instead.
+  // Enter normally means "=" in the calculator; on these buttons let it activate the button instead.
   toggle.addEventListener("keydown", (e) => { if (e.key === "Enter") e.stopPropagation(); });
+
+  // A ticked exercise no longer takes up space: it is hidden until "show done" is pressed.
+  // Each group's summary keeps a running count so progress stays visible.
+  const doneBtn = document.getElementById("exDone");
+  const SHOW_DONE_KEY = "pc-show-done";
+  let showDone = false;
+  try { showDone = localStorage.getItem(SHOW_DONE_KEY) === "1"; } catch (_) {}
+  function refreshDone() {
+    let total = 0;
+    for (const g of groups) {
+      let c = 0;
+      for (let i = g.first; i <= g.last; i++) if (done[i]) c++;
+      total += c;
+      g.range.textContent = `${g.first}–${g.last}` +
+        (c === 0 ? "" : c === g.last - g.first + 1 ? " · all done" : ` · ${c} done`);
+    }
+    doneBtn.hidden = total === 0;
+    doneBtn.textContent = `${showDone ? "hide" : "show"} ${total} done`;
+    doneBtn.setAttribute("aria-pressed", String(showDone));
+    section.classList.toggle("showdone", showDone);
+    window.dispatchEvent(new Event("pc-layout"));
+  }
+  doneBtn.addEventListener("click", () => {
+    showDone = !showDone;
+    try { localStorage.setItem(SHOW_DONE_KEY, showDone ? "1" : "0"); } catch (_) {}
+    refreshDone();
+  });
+  doneBtn.addEventListener("keydown", (e) => { if (e.key === "Enter") e.stopPropagation(); });
+  refreshDone();
 
   root.addEventListener("click", (e) => {
     const b = e.target.closest(".exload");
@@ -995,6 +1031,7 @@
     done[c.dataset.n] = c.checked;
     c.closest(".ex").classList.toggle("done", c.checked);
     save();
+    refreshDone();
   });
 })();
 
