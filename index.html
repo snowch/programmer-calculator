@@ -1057,17 +1057,7 @@
     ["8-bit signed: load FF. What is DEC, and why?", "−1. Add the weights: −128 + 64 + 32 + 16 + 8 + 4 + 2 + 1 = −128 + 127 = −1. All ones is −1 at every width.", L("FF",8,true)],
     ["8-bit signed: load 7F, then 80. Read DEC each time.", "127, then −128: the largest positive and the most negative values. Signed 8-bit runs from −128 to 127, unsigned from 0 to 255 — the same 256 patterns, split differently.", L("7F",8,true)],
     ["Work out −5 by hand: write 5 in binary, invert every bit, add 1. Then check by entering 5 and pressing NEG.", "0000 0101 → 1111 1010 → 1111 1011 = FB. NEG does exactly this. Check the weights: −128 + 64 + 32 + 16 + 8 + 2 + 1 = −5.", L("5",8,true)],
-    ["8-bit signed: load FB (−5) and add 5.", "0, with C and Z lit. The unsigned view wrapped (251 + 5 = 256 needs nine bits), and that wrap is exactly what makes two's complement work: a number plus its negation leaves zero in the bits that survive. The next group is about that wrapping.", L("FB",8,true)],
-  ]],
-  ["Word size, wrap-around and truncation", "The width selector is the single most important control: it is the register size of the machine you are pretending to be.", [
-    ["8-bit: 255 + 1 = ?", "0 — the carry out of bit 7 falls off the end of the word and lights the C flag, exactly as the carry flag in hardware would. Z lights too: the eight bits that survive are all zero.", L("FF",8)],
-    ["8-bit: 0 − 1 = ?", "FF — 255 unsigned, −1 signed. Borrow wraps the same way carry does, and sets C too; N lights because bit 7 is now set.", L("0",8)],
-    ["16-bit: FFFF × 2 = ?", "FFFE — 131070 mod 65536 = 65534.", L("FFFF",16)],
-    ["Load 1234 5678 at 32-bit, then switch to 16, then 8. What survives each time?", "5678, then 78. Narrowing the width keeps only the low bits — exactly what a C cast to a smaller integer type does.", L("12345678",32)],
-    ["Write down the largest unsigned value at 8, 16, 32 and 64 bits, in HEX and DEC. Verify with NOT 0 at each width.", "FF = 255 · FFFF = 65535 · FFFF FFFF = 4294967295 · FFFF FFFF FFFF FFFF = 18446744073709551615"],
-    ["32-bit: 65535 × 65535 = ?", "FFFE 0001 = 4294836225 — fits, because (2¹⁶−1)² < 2³².", L("0",32)],
-    ["32-bit: 65536 × 65536 = ?", "0 — the result is exactly 2³², which is one bit past the register.", L("0",32)],
-    ["8-bit: 200 + 100 = ?", "2C = 44. 300 mod 256 = 44. In C with uint8_t this is well-defined wrap-around.", L("0",8)],
+    ["8-bit signed: load FB (−5) and add 5.", "0, with C and Z lit. The unsigned view wrapped (251 + 5 = 256 needs nine bits), and that wrap is exactly what makes two's complement work: a number plus its negation leaves zero in the bits that survive. The word-size group looks at that wrapping more closely.", L("FB",8,true)],
   ]],
   ["Two's complement: negation, overflow and sign extension", "You can read signed values now. These exercises operate on them: negate, overflow, widen and compare.", [
     ["8-bit signed: click DEC, enter 1, press NEG. What is HEX?", "FF — all ones is −1 in two's complement at every width.", L("1",8,true)],
@@ -1079,6 +1069,16 @@
     ["Sign extension: 8-bit signed, enter 5 and NEG (FB = −5). Switch to 16-bit. What does DEC say? Fix it with one OR.", "00FB = 251, wrong. OR FF00 → FFFB = −5. Hardware does this automatically for a sign-extending load (lb vs lbu on RISC-V); the calculator zero-extends.", L("FB",8,true)],
     ["8-bit: which is bigger, 7F or 80? Answer for unsigned and for signed.", "Unsigned: 80 (128 > 127). Signed: 7F (127 > −128). Same bits, opposite comparison — this is why CPUs have separate signed and unsigned branch instructions.", L("7F",8)],
     ["8-bit signed: NOT 5 versus NEG 5.", "NOT 5 = FA = −6; NEG 5 = FB = −5. NOT x = −x − 1 always.", L("5",8,true)],
+  ]],
+  ["Word size, wrap-around and truncation", "The width selector is the single most important control: it is the register size of the machine you are pretending to be.", [
+    ["8-bit: 255 + 1 = ?", "0 — the carry out of bit 7 falls off the end of the word and lights the C flag, exactly as the carry flag in hardware would. Z lights too: the eight bits that survive are all zero.", L("FF",8)],
+    ["8-bit: 0 − 1 = ?", "FF — 255 unsigned, −1 signed. Borrow wraps the same way carry does, and sets C too; N lights because bit 7 is now set.", L("0",8)],
+    ["16-bit: FFFF × 2 = ?", "FFFE — 131070 mod 65536 = 65534.", L("FFFF",16)],
+    ["Load 1234 5678 at 32-bit, then switch to 16, then 8. What survives each time?", "5678, then 78. Narrowing the width keeps only the low bits — exactly what a C cast to a smaller integer type does.", L("12345678",32)],
+    ["Write down the largest unsigned value at 8, 16, 32 and 64 bits, in HEX and DEC. Verify with NOT 0 at each width.", "FF = 255 · FFFF = 65535 · FFFF FFFF = 4294967295 · FFFF FFFF FFFF FFFF = 18446744073709551615"],
+    ["32-bit: 65535 × 65535 = ?", "FFFE 0001 = 4294836225 — fits, because (2¹⁶−1)² < 2³².", L("0",32)],
+    ["32-bit: 65536 × 65536 = ?", "0 — the result is exactly 2³², which is one bit past the register.", L("0",32)],
+    ["8-bit: 200 + 100 = ?", "2C = 44. 300 mod 256 = 44. In C with uint8_t this is well-defined wrap-around.", L("0",8)],
   ]],
   ["AND, OR, XOR, NOR — masks and flags", "Bitwise ops are how you talk to hardware registers. Every exercise here is something you will do in real driver code.", [
     ["Keep only the low nibble of A7.", "A7 AND 0F = 07", L("A7",8)],
@@ -1184,12 +1184,17 @@
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (_) {} };
   const groups = [];
   // Exercise numbers shift when exercises are inserted; move saved ticks from older layouts.
-  const DONE_LAYOUT = 2;
+  const DONE_LAYOUT = 3;
   try {
     const have = Number(localStorage.getItem("pc-done-layout") || "1");
-    if (have < 2) {   // layout 2 inserted five exercises after #8
+    if (have < DONE_LAYOUT) {
       const moved = {};
-      for (const [k, v] of Object.entries(done)) { const n = Number(k); moved[n >= 9 ? n + 5 : n] = v; }
+      for (const [k, v] of Object.entries(done)) {
+        let n = Number(k);
+        if (have < 2 && n >= 9) n += 5;                                   // layout 2 inserted five exercises after #8
+        if (have < 3) { if (n >= 14 && n <= 21) n += 9; else if (n >= 22 && n <= 30) n -= 8; }   // layout 3 swapped the groups covering 14–30
+        moved[n] = v;
+      }
       done = moved; save();
     }
     localStorage.setItem("pc-done-layout", String(DONE_LAYOUT));
