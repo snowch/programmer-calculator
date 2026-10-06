@@ -103,6 +103,32 @@
     border-radius: 999px; padding: 4px 11px;
   }
   .themebtn .themek { color: var(--muted); }
+  .helpbtn { min-width: 30px; padding: 4px 9px; font-weight: 600; }
+  @media (max-width: 399px) { .themebtn .themek { display: none; } }
+
+  /* ---- help ---- */
+  dialog.help {
+    border: 1px solid var(--key-border); border-radius: 14px; padding: 0;
+    width: min(92vw, 640px); max-height: 85vh; max-height: 85dvh;
+    background: var(--surface); color: var(--ink); font-family: var(--mono); font-size: 13px; line-height: 1.5;
+  }
+  dialog.help[open] { display: flex; flex-direction: column; }
+  dialog.help::backdrop { background: rgba(0, 0, 0, 0.45); }
+  .helphead {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid var(--key-border); flex: 0 0 auto;
+  }
+  .helphead h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .helpbody { padding: 2px 16px 16px; overflow-y: auto; flex: 1 1 auto; min-height: 0; overscroll-behavior: contain; }
+  .helpbody h3 { font-size: 13px; font-weight: 600; margin: 16px 0 6px; color: var(--accent); }
+  .helpbody p { margin: 0 0 8px; }
+  .helplist { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 8px; }
+  .helplist dt { font-weight: 600; white-space: nowrap; }
+  .helplist dd { margin: 0; color: var(--muted); }
+  .helpbody kbd {
+    font: inherit; font-size: 12px; background: var(--surface-2);
+    border: 1px solid var(--key-border); border-radius: 4px; padding: 0 5px;
+  }
   .themebtn:hover { border-color: var(--accent); }
   .themebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
@@ -340,6 +366,7 @@
     <div class="hdrbtns">
       <button type="button" class="install" id="installBtn">install app</button>
       <button type="button" class="themebtn" id="themeBtn"><span class="themek">theme</span> <span id="themeVal">auto</span></button>
+      <button type="button" class="themebtn helpbtn" id="helpBtn" aria-label="Help" title="Help" aria-haspopup="dialog">?</button>
     </div>
   </header>
 
@@ -404,6 +431,51 @@
     </div>
   </section>
 </div>
+
+<dialog class="help" id="helpDlg" aria-labelledby="helph">
+  <div class="helphead">
+    <h2 id="helph">Help</h2>
+    <button type="button" class="extoggle" id="helpClose">close</button>
+  </div>
+  <div class="helpbody">
+    <h3>The display</h3>
+    <p>The four rows show one value in hex, decimal, octal and binary. Tap a row to type in that base; the highlighted row is the one you are typing into, and digits that do not exist in that base are greyed out. The ⧉ icon copies the value with a 0x, 0o or 0b prefix.</p>
+    <p><b>8 · 16 · 32 · 64</b> sets the word size, and every result wraps to that many bits. <b>unsigned / signed</b> changes how the decimal row reads the same bits: signed uses two's complement, and ÷, mod and right shifts become arithmetic.</p>
+    <p>Tap any bit in the bit grid to flip it. The <b>ascii</b> line shows each byte as a character, and the <b>char</b> box loads a character's code point and shows its UTF-8 and UTF-16 encodings.</p>
+
+    <h3>Flags</h3>
+    <p>The flags describe the last operation, like a CPU status register. They clear when you press AC, type a new number or change the word size, and they stay put when you switch between signed and unsigned so both readings of a result can be compared.</p>
+    <dl class="helplist">
+      <dt>C</dt><dd>carry or borrow: the unsigned result did not fit the word. For shifts and rotates, the last bit shifted out.</dd>
+      <dt>V</dt><dd>overflow: the signed result did not fit the word.</dd>
+      <dt>Z</dt><dd>the result was zero.</dd>
+      <dt>N</dt><dd>the result has its top bit set.</dd>
+    </dl>
+
+    <h3>Keys</h3>
+    <dl class="helplist">
+      <dt>AND OR XOR NOR</dt><dd>bitwise operations between two values.</dd>
+      <dt>&lt;&lt; &gt;&gt;</dt><dd>shift the value one bit left or right.</dd>
+      <dt>X&lt;&lt;Y X&gt;&gt;Y</dt><dd>shift by a count: enter the value, press the key, enter the count, press =.</dd>
+      <dt>NOT NEG</dt><dd>invert every bit; two's-complement negate.</dd>
+      <dt>RoL RoR</dt><dd>rotate one bit left or right; the bit that wraps around goes to C.</dd>
+      <dt>mod</dt><dd>remainder of a division.</dd>
+      <dt>flip<sub>8</sub> flip<sub>16</sub></dt><dd>reverse the byte order, or the 16-bit word order (endianness).</dd>
+      <dt>( )</dt><dd>group a sub-expression; the line above the rows shows what is still pending.</dd>
+      <dt>⌫ AC</dt><dd>delete the last digit; clear everything. Dividing by zero shows an error that AC clears.</dd>
+    </dl>
+    <p>On a phone the keypad and the operations are two pages: swipe between them, or tap <b>keypad | ops</b>.</p>
+
+    <h3>Keyboard</h3>
+    <p><kbd>0</kbd>–<kbd>9</kbd> <kbd>a</kbd>–<kbd>f</kbd> digits · <kbd>(</kbd> <kbd>)</kbd> · <kbd>&amp;</kbd> AND · <kbd>|</kbd> OR · <kbd>^</kbd> XOR · <kbd>~</kbd> NOT · <kbd>&lt;</kbd> <kbd>&gt;</kbd> shift by a count · <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> · <kbd>%</kbd> mod · <kbd>Enter</kbd> or <kbd>=</kbd> · <kbd>Backspace</kbd> · <kbd>Esc</kbd> AC</p>
+
+    <h3>Exercises</h3>
+    <p>Each group opens into a list. <b>load</b> sets the calculator to the starting value and word size, and <b>answer</b> reveals the worked solution. Tick an exercise when it is done: it is tucked away and the group's summary counts it, and a fully ticked group is tucked away too. <b>show N done</b> brings them back to review or untick, and <b>hide</b> collapses the whole section. Ticks are saved on this device only.</p>
+
+    <h3>App</h3>
+    <p>Everything works offline once it has loaded. <b>theme</b> cycles auto → light → dark and is remembered. Install it from the browser menu, or with the <b>install app</b> button when it appears, to get a full-screen app with its own icon.</p>
+  </div>
+</dialog>
 
 <script>
 (() => {
@@ -905,8 +977,19 @@
     });
   }
 
+  // ---------- help ----------
+  const helpDlg = document.getElementById("helpDlg");
+  const helpBtn = document.getElementById("helpBtn");
+  helpBtn.addEventListener("click", () => {
+    if (typeof helpDlg.showModal === "function") helpDlg.showModal(); else helpDlg.setAttribute("open", "");
+  });
+  helpBtn.addEventListener("keydown", (e) => { if (e.key === "Enter") e.stopPropagation(); });
+  document.getElementById("helpClose").addEventListener("click", () => helpDlg.close());
+  helpDlg.addEventListener("click", (e) => { if (e.target === helpDlg) helpDlg.close(); });   // backdrop
+
   // ---------- keyboard ----------
   document.addEventListener("keydown", (e) => {
+    if (helpDlg.open) return;                       // the help page owns the keyboard while open
     if (e.target && e.target.tagName === "INPUT") return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key;
