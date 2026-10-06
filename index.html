@@ -210,6 +210,19 @@
 
   /* ---- keypad ---- */
   .padwrap { margin-top: 14px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .padtabs { display: none; }
+  @media (max-width: 639px) {
+    /* Compact: swipe (or tap the switch) between the keypad and the operations. */
+    .padtabs { display: flex; justify-content: center; margin-top: 14px; }
+    .padtabs .seg button { padding: 5px 16px; font-size: 13px; }
+    .padwrap {
+      margin-top: 10px; flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x mandatory;
+      scrollbar-width: none; overscroll-behavior-x: contain;
+    }
+    .padwrap::-webkit-scrollbar { display: none; }
+    .padwrap > .opspad, .padwrap > .mainpad { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+    .padwrap > .mainpad { order: -1; }
+  }
   .opspad {
     display: grid; grid-template-columns: repeat(3, minmax(64px, 1fr));
     gap: 7px; flex: 1 1 260px; align-content: start;
@@ -362,7 +375,13 @@
     </div>
     <div class="bits" id="bits" aria-label="Bit toggles"></div>
 
-    <div class="padwrap">
+    <div class="padtabs">
+      <div class="seg" id="padSeg" role="group" aria-label="Keypad page">
+        <button type="button" data-pane="0" class="on">keypad</button>
+        <button type="button" data-pane="1">ops</button>
+      </div>
+    </div>
+    <div class="padwrap" id="padwrap">
       <div class="opspad" id="opspad" aria-label="Bitwise operations"></div>
       <div class="mainpad" aria-label="Digits">
         <div class="hexrow" id="hexrow"></div>
@@ -864,6 +883,27 @@
   // Enter normally means "=" in the calculator; on this button let it activate the button instead.
   themeBtn.addEventListener("keydown", (e) => { if (e.key === "Enter") e.stopPropagation(); });
   applyTheme();
+
+  // ---------- compact pads: swipe or tap between keypad and ops ----------
+  const padwrap = document.getElementById("padwrap");
+  const padTabs = [...document.querySelectorAll("#padSeg button")];
+  const panes = () => [document.querySelector(".mainpad"), opspadEl];   // visual order on compact screens
+  const paneLeft = (el) => el.getBoundingClientRect().left - padwrap.getBoundingClientRect().left + padwrap.scrollLeft;
+  function markPane() {
+    let best = 0, dist = Infinity;
+    panes().forEach((p, i) => { const d = Math.abs(paneLeft(p) - padwrap.scrollLeft); if (d < dist) { dist = d; best = i; } });
+    for (const b of padTabs) b.classList.toggle("on", Number(b.dataset.pane) === best);
+  }
+  let padRaf = 0;
+  padwrap.addEventListener("scroll", () => {
+    if (!padRaf) padRaf = requestAnimationFrame(() => { padRaf = 0; markPane(); });
+  }, { passive: true });
+  for (const b of padTabs) {
+    b.addEventListener("click", () => {
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      padwrap.scrollTo({ left: paneLeft(panes()[Number(b.dataset.pane)]), behavior: reduce ? "auto" : "smooth" });
+    });
+  }
 
   // ---------- keyboard ----------
   document.addEventListener("keydown", (e) => {
