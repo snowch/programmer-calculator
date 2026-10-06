@@ -246,7 +246,7 @@
   .exbtns { display: flex; gap: 6px; margin-left: auto; }
   .exercises h2 { font-size: 15px; font-weight: 600; margin: 0; }
   .exercises.collapsed .excontent { display: none; }
-  .exercises:not(.showdone) .ex.done { display: none; }
+  .exercises:not(.showdone) .ex.done, .exercises:not(.showdone) .exgroup.alldone { display: none; }
   .exercises .lede { color: var(--muted); font-size: 12px; margin: 0 0 14px; max-width: 70ch; }
   .exgroup {
     background: var(--surface); border: 1px solid var(--key-border);
@@ -987,7 +987,7 @@
     det.innerHTML = `<summary><span>${title}</span><span class="exrange">${first}–${last}</span></summary>` +
       (intro ? `<p class="exintro">${intro}</p>` : "") + `<ol start="${first}"></ol>`;
     const ol = det.querySelector("ol");
-    groups.push({ first, last, range: det.querySelector(".exrange") });
+    groups.push({ det, first, last, range: det.querySelector(".exrange") });
     for (const [task, answer, load] of items) {
       n++;
       const li = document.createElement("li");
@@ -1025,8 +1025,8 @@
   // Enter normally means "=" in the calculator; on these buttons let it activate the button instead.
   toggle.addEventListener("keydown", (e) => { if (e.key === "Enter") e.stopPropagation(); });
 
-  // A ticked exercise no longer takes up space: it is hidden until "show done" is pressed.
-  // Each group's summary keeps a running count so progress stays visible.
+  // A ticked exercise no longer takes up space: it is hidden until "show done" is pressed, and so
+  // is a group once every exercise in it is ticked. Each group's summary keeps a running count.
   const doneBtn = document.getElementById("exDone");
   const SHOW_DONE_KEY = "pc-show-done";
   let showDone = false;
@@ -1037,8 +1037,9 @@
       let c = 0;
       for (let i = g.first; i <= g.last; i++) if (done[i]) c++;
       total += c;
-      g.range.textContent = `${g.first}–${g.last}` +
-        (c === 0 ? "" : c === g.last - g.first + 1 ? " · all done" : ` · ${c} done`);
+      const all = c === g.last - g.first + 1;
+      g.det.classList.toggle("alldone", all); // a fully ticked group is tucked away with its exercises
+      g.range.textContent = `${g.first}–${g.last}` + (c === 0 ? "" : all ? " · all done" : ` · ${c} done`);
     }
     doneBtn.hidden = total === 0;
     doneBtn.textContent = `${showDone ? "hide" : "show"} ${total} done`;
