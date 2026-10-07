@@ -464,7 +464,7 @@
     <p>Tap any bit in the bit grid to flip it. The label above the top bit shows what that bit is worth, +2ⁿ⁻¹ unsigned or −2ⁿ⁻¹ signed, and lights while the bit is set. The <b>ascii</b> line shows each byte as a character, and the <b>char</b> box loads a character's code point and shows its UTF-8 and UTF-16 encodings.</p>
 
     <h3>Flags</h3>
-    <p>The flags describe the last operation, like a CPU status register. They clear when you press AC, type a new number or change the word size, and they stay put when you switch between signed and unsigned so both readings of a result can be compared.</p>
+    <p>The flags describe the last operation, like a CPU status register. Typing a number or tapping bits is not an operation, so it leaves them clear, as a load instruction does on a CPU. They clear when you press AC or change the word size, and they stay put when you switch between signed and unsigned so both readings of a result can be compared.</p>
     <dl class="helplist">
       <dt>C</dt><dd>carry or borrow: the unsigned result did not fit the word. For shifts and rotates, the last bit shifted out.</dd>
       <dt>V</dt><dd>overflow: the signed result did not fit the word.</dd>
@@ -1130,13 +1130,14 @@
     ["Click OCT, type 777. Read HEX, DEC, BIN.", "1FF · 511 · 1 1111 1111 — nine set bits.", L("0",16)],
     ["Load 2014 at 16-bit and look at the char row. What character has code point U+2014?", "The em dash —. Its UTF-8 is E2 80 94 (three bytes), UTF-16 is just 2014.", L("2014",16)],
   ], "<p>A number inside a computer is just a pattern of bits. HEX, DEC, OCT and BIN are four ways of writing the <b>same</b> pattern, which is why all four readouts change together.</p>\n<p><b>Binary:</b> each bit is worth a power of two, 1, 2, 4, 8, 16, 32, 64, 128 counting from the right; the value is the sum of the bits that are 1. <b>Hex:</b> one hex digit is exactly four bits (0–9, then A = 10 up to F = 15), so the BIN readout is grouped in fours: read each group as one hex digit. <b>Octal:</b> one digit per three bits.</p>\n<p>Try it: press AC, then tap bits 0, 1 and 3 in the bit grid. DEC shows 1 + 2 + 8 = 11 and HEX shows B, because 1011 is the digit B.</p>"],
-  ["Negative numbers: reading two's complement", "Switch to <b>signed</b>. The bits do not change; DEC just reads the top bit as negative: at 8 bits it is worth −128 instead of +128, so every pattern whose top bit is set is a negative number. The <b>N</b> flag simply reports that bit.", [
+  ["Negative numbers: reading two's complement", "Switch to <b>signed</b>. The bits do not change; DEC just reads the top bit as negative: at 8 bits it is worth −128 instead of +128, so every pattern whose top bit is set is a negative number. After an operation, the <b>N</b> flag reports that bit of the result.", [
     ["8-bit: load 80 (1000 0000). Read DEC in unsigned, then switch to signed.", "128, then −128. In signed mode the top bit is worth −2⁷ = −128 instead of +128; the other seven bits keep their usual weights.", L("80",8)],
     ["8-bit signed: load FF. What is DEC, and why?", "−1. Add the weights: −128 + 64 + 32 + 16 + 8 + 4 + 2 + 1 = −128 + 127 = −1. All ones is −1 at every width.", L("FF",8,true)],
     ["8-bit signed: load 7F, then 80. Read DEC each time.", "127, then −128: the largest positive and the most negative values. Signed 8-bit runs from −128 to 127, unsigned from 0 to 255 — the same 256 patterns, split differently.", L("7F",8,true)],
     ["Work out −5 by hand: write 5 in binary, invert every bit, add 1. Then check by entering 5 and pressing NEG.", "0000 0101 → 1111 1010 → 1111 1011 = FB. NEG does exactly this. Check the weights: −128 + 64 + 32 + 16 + 8 + 2 + 1 = −5.", L("5",8,true)],
+    ["Build 1111 1011 (−5) a second way: press AC, then tap bits 7, 6, 5, 4, 3, 1 and 0. Same value as 5 NEG, but look at the flags. Why does nothing light now, when NEG lit N and C?", "Because the flags report the last <b>operation</b>, and tapping bits is not one: you wrote the register directly, as a load instruction or a debugger does, and a CPU's status register does not change for those either. 5 NEG was an operation: N because its result is negative, C because negating borrows from 0 − 5. Same bits, different history. AC clears the flags for the same reason: nothing has been computed yet.", L("0",8,true)],
     ["8-bit signed: load FB (−5) and add 5.", "0, with C and Z lit. The unsigned view wrapped (251 + 5 = 256 needs nine bits), and that wrap is exactly what makes two's complement work: a number plus its negation leaves zero in the bits that survive. The word-size group looks at that wrapping more closely.", L("FB",8,true)],
-  ], "<p>A computer has no minus sign, only bits, so negative numbers have to be a convention. <b>Two's complement</b> is the one every CPU uses: the top bit is given a <b>negative</b> weight. In 8 bits the weights are −128, 64, 32, 16, 8, 4, 2, 1 instead of 128, 64, 32, … Everything whose top bit is 1 is therefore negative, and the range is −128 to 127.</p>\n<p><b>Reading:</b> add the weights as usual, with the top one negative. 1111 1111 = −128 + 127 = −1. 1000 0000 = −128. 1111 1011 = −128 + 64 + 32 + 16 + 8 + 2 + 1 = −5.</p>\n<p><b>Writing −x:</b> write x, invert every bit, add 1. The NEG key does exactly this. It works because x plus its complement is all ones, 1111 1111 = −1, so adding one more makes x + (−x) = 0 with the carry falling off the end of the word.</p>\n<p>The <b>signed / unsigned</b> switch changes nothing in the bits. It only tells the DEC readout whether to treat the top bit as −128 or +128. Watch the label above the top bit in the bit grid flip between +128 and −128 as you switch; it lights up while that bit is set and counting. The N flag just reports that bit.</p>"],
+  ], "<p>A computer has no minus sign, only bits, so negative numbers have to be a convention. <b>Two's complement</b> is the one every CPU uses: the top bit is given a <b>negative</b> weight. In 8 bits the weights are −128, 64, 32, 16, 8, 4, 2, 1 instead of 128, 64, 32, … Everything whose top bit is 1 is therefore negative, and the range is −128 to 127.</p>\n<p><b>Reading:</b> add the weights as usual, with the top one negative. 1111 1111 = −128 + 127 = −1. 1000 0000 = −128. 1111 1011 = −128 + 64 + 32 + 16 + 8 + 2 + 1 = −5.</p>\n<p><b>Writing −x:</b> write x, invert every bit, add 1. The NEG key does exactly this. It works because x plus its complement is all ones, 1111 1111 = −1, so adding one more makes x + (−x) = 0 with the carry falling off the end of the word.</p>\n<p>The <b>signed / unsigned</b> switch changes nothing in the bits. It only tells the DEC readout whether to treat the top bit as −128 or +128. Watch the label above the top bit in the bit grid flip between +128 and −128 as you switch; it lights up while that bit is set and counting. The N flag reports that bit of the last result.</p>"],
   ["Two's complement: negation, overflow and sign extension", "You can read signed values now. These exercises operate on them: negate, overflow, widen and compare.", [
     ["8-bit signed: click DEC, enter 1, press NEG. What is HEX?", "FF — all ones is −1 in two's complement at every width.", L("1",8,true)],
     ["8-bit signed: 127 + 1 = ?", "80 = −128. Signed overflow: the sum spilled into the sign bit, so V lights (and N, since bit 7 is set) while C stays clear.", L("7F",8,true)],
@@ -1262,7 +1263,7 @@
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (_) {} };
   const groups = [];
   // Exercise numbers shift when exercises are inserted; move saved ticks from older layouts.
-  const DONE_LAYOUT = 3;
+  const DONE_LAYOUT = 4;
   try {
     const have = Number(localStorage.getItem("pc-done-layout") || "1");
     if (have < DONE_LAYOUT) {
@@ -1271,6 +1272,7 @@
         let n = Number(k);
         if (have < 2 && n >= 9) n += 5;                                   // layout 2 inserted five exercises after #8
         if (have < 3) { if (n >= 14 && n <= 21) n += 9; else if (n >= 22 && n <= 30) n -= 8; }   // layout 3 swapped the groups covering 14–30
+        if (have < 4 && n >= 13) n += 1;                                  // layout 4 inserted one exercise after #12
         moved[n] = v;
       }
       done = moved; save();
