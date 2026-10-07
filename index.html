@@ -409,10 +409,10 @@
     <div class="meta">
       <div class="flags" id="flags" aria-label="Status flags from the last operation">
         <span class="flagk">flags</span>
-        <span class="flag" data-flag="C" title="Carry / borrow from the last operation: the unsigned result did not fit the word">C</span>
-        <span class="flag" data-flag="V" title="Overflow from the last operation: the signed result did not fit the word">V</span>
-        <span class="flag" data-flag="Z" title="Zero: the value is 0">Z</span>
-        <span class="flag" data-flag="N" title="Negative: the top bit of the value is set (a negative number when read as signed)">N</span>
+        <span class="flag" data-flag="C" title="Carry / borrow: the unsigned result did not fit the word">C</span>
+        <span class="flag" data-flag="V" title="Overflow: the signed result did not fit the word">V</span>
+        <span class="flag" data-flag="Z" title="Zero: the last result was 0">Z</span>
+        <span class="flag" data-flag="N" title="Negative: the last result has its top bit set">N</span>
       </div>
       <div class="ascii" id="ascii"></div>
     </div>
@@ -464,12 +464,12 @@
     <p>Tap any bit in the bit grid to flip it. The label above the top bit shows what that bit is worth, +2ⁿ⁻¹ unsigned or −2ⁿ⁻¹ signed, and lights while the bit is set. The <b>ascii</b> line shows each byte as a character, and the <b>char</b> box loads a character's code point and shows its UTF-8 and UTF-16 encodings.</p>
 
     <h3>Flags</h3>
-    <p><b>C</b> and <b>V</b> describe the last operation, like a CPU status register: they clear when you press AC, type a new number or change the word size, and stay put when you switch between signed and unsigned so both readings of a result can be compared. <b>Z</b> and <b>N</b> describe the value on screen however it got there, typed, built from bits or computed. AC clears all four until the next value.</p>
+    <p>The flags describe the last operation, like a CPU status register. They clear when you press AC, type a new number or change the word size, and they stay put when you switch between signed and unsigned so both readings of a result can be compared.</p>
     <dl class="helplist">
       <dt>C</dt><dd>carry or borrow: the unsigned result did not fit the word. For shifts and rotates, the last bit shifted out.</dd>
       <dt>V</dt><dd>overflow: the signed result did not fit the word.</dd>
-      <dt>Z</dt><dd>the value is zero.</dd>
-      <dt>N</dt><dd>the top bit of the value is set, which is negative when read as signed.</dd>
+      <dt>Z</dt><dd>the result was zero.</dd>
+      <dt>N</dt><dd>the result has its top bit set.</dd>
     </dl>
 
     <h3>Keys</h3>
@@ -511,8 +511,7 @@
   let stack = [];           // open parentheses: [{acc, op}, ...]
   let fresh = true;
   let error = null;
-  let flags = { C: false, V: false };   // carry/borrow and overflow from the operation that produced `value`
-  let flagsLive = false;                // false right after AC: nothing has been entered or computed yet
+  let flags = { C: false, V: false, Z: false, N: false };   // status of the operation that produced `value`
 
   const BIG = (n) => BigInt(n);
   const mask = () => (1n << BIG(width)) - 1n;
@@ -521,10 +520,8 @@
   const toSigned = (v) => (v & signBit()) ? v - (mask() + 1n) : v;
   const fitsSigned = (s) => s >= -signBit() && s < signBit();
   const bit = (v, i) => i >= 0n && i < BIG(width) && ((v >> i) & 1n) === 1n;
-  const clearFlags = () => { flags = { C: false, V: false }; };              // no operation describes the value now
-  const touchFlags = () => { clearFlags(); flagsLive = true; };              // the value was typed, loaded or edited
-  const resetFlags = () => { clearFlags(); flagsLive = false; };             // AC
-  const setFlags = (c, v) => { flags = { C: c, V: v }; flagsLive = true; };  // an operation ran
+  const clearFlags = () => { flags = { C: false, V: false, Z: false, N: false }; };
+  const setFlags = (c, v, r) => { flags = { C: c, V: v, Z: r === 0n, N: bit(r, BIG(width - 1)) }; };
 
   // ---------- formatting ----------
   function group(s, n, sep) {
@@ -549,12 +546,12 @@
                      add:"+", sub:"−", mul:"×", div:"÷", mod:"mod" };
   function apply(a, o, b) {
     const r = compute(a, o, b);
-    setFlags(...binaryFlags(a, o, b));
+    setFlags(...binaryFlags(a, o, b), r);
     return r;
   }
   // Flags the way a CPU sets them: C when the unsigned result wrapped (for shifts, the last bit
-  // shifted out), V when the signed result wrapped; logic ops clear both. Z and N describe the
-  // value on screen however it got there; AC clears everything until the next value.
+  // shifted out), V when the signed result wrapped; logic ops clear both. Z and N come from the
+  // result itself. Nothing is set until an operation runs, and AC clears everything.
   function binaryFlags(a, o, b) {
     const sa = toSigned(a), sb = toSigned(b), w = BIG(width);
     switch (o) {
@@ -626,14 +623,14 @@
     if (fresh) { value = 0n; fresh = false; }
     const next = value * BIG(base) + BIG(d);
     if (next > mask()) return;
-    touchFlags();
+    clearFlags();
     value = next;
     render();
   }
   function fail(e) {
     error = e.message;
     acc = null; op = null; stack = []; fresh = true;
-    resetFlags();
+    clearFlags();
     render();
   }
   function setOp(o) {
@@ -678,7 +675,7 @@
     if (error) clearAll();
     const v = value;
     value = clamp(UNARY[name](v));
-    setFlags(...unaryFlags(name, v));
+    setFlags(...unaryFlags(name, v), value);
     fresh = true;
     render();
   }
@@ -696,13 +693,13 @@
   function backspace() {
     if (error) { clearAll(); return; }
     if (fresh) return;
-    touchFlags();
+    clearFlags();
     value = value / BIG(base);
     render();
   }
   function clearAll() {
     value = 0n; acc = null; op = null; stack = []; fresh = true; error = null;
-    resetFlags();
+    clearFlags();
     render();
   }
 
@@ -773,7 +770,7 @@
         btn.setAttribute("aria-label", "bit " + bitIndex);
         btn.addEventListener("click", () => {
           if (error) clearAll();
-          touchFlags();
+          clearFlags();
           value ^= 1n << BIG(bitIndex);
           fresh = false;
           render();
@@ -920,12 +917,11 @@
     }
     asciiEl.innerHTML = "ascii <b>" + chars.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</b>";
     document.getElementById("uniInfo").innerHTML = unicodeInfo();
-    const shown = { C: flags.C, V: flags.V, Z: flagsLive && value === 0n, N: flagsLive && bit(value, BIG(width - 1)) };
     for (const el of flagsEl.children) {
       const f = el.dataset.flag;
       if (!f) continue;
-      el.classList.toggle("on", shown[f]);
-      el.setAttribute("aria-label", f + (shown[f] ? " set" : " clear"));
+      el.classList.toggle("on", flags[f]);
+      el.setAttribute("aria-label", f + (flags[f] ? " set" : " clear"));
     }
     const wt = document.getElementById("msbWeight");
     if (wt) {
@@ -984,7 +980,7 @@
         if (v <= (1n << BIG(w)) - 1n) { setWidth(w); break; }
       }
     }
-    touchFlags();
+    clearFlags();
     value = v & mask();
     fresh = true;
     charIn.value = String.fromCodePoint(cp);
@@ -1105,7 +1101,7 @@
     for (const b of document.getElementById("signSeg").children)
       b.classList.toggle("on", (b.dataset.s === "1") === signed);
     acc = null; op = null; stack = []; error = null; fresh = true;
-    touchFlags();
+    clearFlags();
     value = BigInt("0x" + String(hex).replace(/\s+/g, "")) & mask();
     render();
   };
