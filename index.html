@@ -214,7 +214,10 @@
   .charin input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* ---- bit grid ---- */
-  .bits { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: flex-end; }
+  .bits { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: flex-end; align-items: flex-end; }
+  .byte .weight { color: var(--muted); font-size: 11px; padding: 0 2px; white-space: nowrap; cursor: help; }
+  .byte .weight b { font-weight: 600; color: var(--muted); }
+  .byte .weight.on b { color: var(--accent); }
   .byte { display: grid; grid-template-rows: auto auto; gap: 4px; }
   .byte .cells { display: flex; gap: 3px; }
   .byte .lbl {
@@ -458,7 +461,7 @@
     <h3>The display</h3>
     <p>The HEX, DEC, OCT and BIN readouts show one value four ways. Tap one to type in that base; the highlighted readout is the one you are typing into, and digits that do not exist in that base are greyed out. The ⧉ icon copies the value with a 0x, 0o or 0b prefix.</p>
     <p><b>8 · 16 · 32 · 64</b> sets the word size, and every result wraps to that many bits. <b>unsigned / signed</b> changes how the decimal row reads the same bits: signed uses two's complement, and ÷, mod and right shifts become arithmetic.</p>
-    <p>Tap any bit in the bit grid to flip it. The <b>ascii</b> line shows each byte as a character, and the <b>char</b> box loads a character's code point and shows its UTF-8 and UTF-16 encodings.</p>
+    <p>Tap any bit in the bit grid to flip it. The label above the top bit shows what that bit is worth, +2ⁿ⁻¹ unsigned or −2ⁿ⁻¹ signed, and lights while the bit is set. The <b>ascii</b> line shows each byte as a character, and the <b>char</b> box loads a character's code point and shows its UTF-8 and UTF-16 encodings.</p>
 
     <h3>Flags</h3>
     <p>The flags describe the last operation, like a CPU status register. They clear when you press AC, type a new number or change the word size, and they stay put when you switch between signed and unsigned so both readings of a result can be compared.</p>
@@ -750,6 +753,12 @@
     for (let by = bytes - 1; by >= 0; by--) {
       const grp = document.createElement("div");
       grp.className = "byte";
+      if (by === bytes - 1) {            // the top byte carries the weight of the top bit
+        const wt = document.createElement("div");
+        wt.className = "weight";
+        wt.id = "msbWeight";
+        grp.appendChild(wt);
+      }
       const cells = document.createElement("div");
       cells.className = "cells";
       for (let i = 7; i >= 0; i--) {
@@ -913,6 +922,14 @@
       if (!f) continue;
       el.classList.toggle("on", flags[f]);
       el.setAttribute("aria-label", f + (flags[f] ? " set" : " clear"));
+    }
+    const wt = document.getElementById("msbWeight");
+    if (wt) {
+      const sign = signed ? "−" : "+";
+      wt.innerHTML = `bit ${width - 1} = <b>${sign}${signBit().toString(10)}</b>`;
+      wt.classList.toggle("on", bit(value, BIG(width - 1)));
+      wt.title = `The top bit is worth ${sign}2^${width - 1} when read as ${signed ? "signed" : "unsigned"}. ` +
+                 `Switch between signed and unsigned to see the sign change; the bits themselves do not.`;
     }
     for (const btn of bitsEl.querySelectorAll(".bit")) {
       const i = BIG(btn.dataset.bit);
@@ -1119,7 +1136,7 @@
     ["8-bit signed: load 7F, then 80. Read DEC each time.", "127, then −128: the largest positive and the most negative values. Signed 8-bit runs from −128 to 127, unsigned from 0 to 255 — the same 256 patterns, split differently.", L("7F",8,true)],
     ["Work out −5 by hand: write 5 in binary, invert every bit, add 1. Then check by entering 5 and pressing NEG.", "0000 0101 → 1111 1010 → 1111 1011 = FB. NEG does exactly this. Check the weights: −128 + 64 + 32 + 16 + 8 + 2 + 1 = −5.", L("5",8,true)],
     ["8-bit signed: load FB (−5) and add 5.", "0, with C and Z lit. The unsigned view wrapped (251 + 5 = 256 needs nine bits), and that wrap is exactly what makes two's complement work: a number plus its negation leaves zero in the bits that survive. The word-size group looks at that wrapping more closely.", L("FB",8,true)],
-  ], "<p>A computer has no minus sign, only bits, so negative numbers have to be a convention. <b>Two's complement</b> is the one every CPU uses: the top bit is given a <b>negative</b> weight. In 8 bits the weights are −128, 64, 32, 16, 8, 4, 2, 1 instead of 128, 64, 32, … Everything whose top bit is 1 is therefore negative, and the range is −128 to 127.</p>\n<p><b>Reading:</b> add the weights as usual, with the top one negative. 1111 1111 = −128 + 127 = −1. 1000 0000 = −128. 1111 1011 = −128 + 64 + 32 + 16 + 8 + 2 + 1 = −5.</p>\n<p><b>Writing −x:</b> write x, invert every bit, add 1. The NEG key does exactly this. It works because x plus its complement is all ones, 1111 1111 = −1, so adding one more makes x + (−x) = 0 with the carry falling off the end of the word.</p>\n<p>The <b>signed / unsigned</b> switch changes nothing in the bits. It only tells the DEC readout whether to treat the top bit as −128 or +128. The N flag just reports that bit.</p>"],
+  ], "<p>A computer has no minus sign, only bits, so negative numbers have to be a convention. <b>Two's complement</b> is the one every CPU uses: the top bit is given a <b>negative</b> weight. In 8 bits the weights are −128, 64, 32, 16, 8, 4, 2, 1 instead of 128, 64, 32, … Everything whose top bit is 1 is therefore negative, and the range is −128 to 127.</p>\n<p><b>Reading:</b> add the weights as usual, with the top one negative. 1111 1111 = −128 + 127 = −1. 1000 0000 = −128. 1111 1011 = −128 + 64 + 32 + 16 + 8 + 2 + 1 = −5.</p>\n<p><b>Writing −x:</b> write x, invert every bit, add 1. The NEG key does exactly this. It works because x plus its complement is all ones, 1111 1111 = −1, so adding one more makes x + (−x) = 0 with the carry falling off the end of the word.</p>\n<p>The <b>signed / unsigned</b> switch changes nothing in the bits. It only tells the DEC readout whether to treat the top bit as −128 or +128. Watch the label above the top bit in the bit grid flip between +128 and −128 as you switch; it lights up while that bit is set and counting. The N flag just reports that bit.</p>"],
   ["Two's complement: negation, overflow and sign extension", "You can read signed values now. These exercises operate on them: negate, overflow, widen and compare.", [
     ["8-bit signed: click DEC, enter 1, press NEG. What is HEX?", "FF — all ones is −1 in two's complement at every width.", L("1",8,true)],
     ["8-bit signed: 127 + 1 = ?", "80 = −128. Signed overflow: the sum spilled into the sign bit, so V lights (and N, since bit 7 is set) while C stays clear.", L("7F",8,true)],
