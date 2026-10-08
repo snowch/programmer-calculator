@@ -7,6 +7,10 @@ an in-app help page.
 
 **Live app:** https://snowch.github.io/programmer-calculator/
 
+**Two's complement tutorial (PDF):** https://snowch.github.io/programmer-calculator/docs/twos-complement.pdf
+— a standalone six-page explainer (reading and writing negatives, modulo arithmetic, overflow, width
+changes, hex, shifts, practice problems and a cheat sheet) that the calculator's exercise groups follow.
+
 ## Files
 
 Everything is static and lives at the repository root (all paths are relative, so the app
@@ -19,6 +23,7 @@ works from any sub-path):
 | `sw.js` | Service worker: caches the app shell so it works offline |
 | `icon-*.png` | 192 px / 512 px icons, plus maskable variants for Android |
 | `screenshots/` | Images shown in the install dialog (Android / desktop) |
+| `docs/twos-complement.html`, `docs/twos-complement.pdf` | The two's complement tutorial: print-ready HTML source and the PDF rendered from it |
 | `.github/workflows/pages.yml` | Deploys the site to GitHub Pages on every push to `main` |
 | `.nojekyll` | Tells GitHub Pages to publish the files as-is |
 
