@@ -8,8 +8,9 @@ an in-app help page.
 **Live app:** https://snowch.github.io/programmer-calculator/
 
 **Two's complement tutorial (PDF):** https://snowch.github.io/programmer-calculator/docs/twos-complement.pdf
-— a standalone six-page explainer (reading and writing negatives, modulo arithmetic, overflow, width
-changes, hex, shifts, practice problems and a cheat sheet) that the calculator's exercise groups follow.
+— a standalone seven-page explainer (reading and writing negatives, the NOT operation, modulo
+arithmetic, overflow, width changes, hex, shifts, practice problems and a cheat sheet) that the
+calculator's exercise groups follow.
 
 ## Files
 
