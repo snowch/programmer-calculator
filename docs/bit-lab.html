@@ -244,6 +244,7 @@ svg.blockdiag{width:100%;max-width:420px;height:auto;display:block;margin:6px 0 
 .fa svg{display:block;width:100%;height:auto}
 .jdot{fill:var(--wire-off)}
 .jdot.on{fill:var(--wire-on)}
+.jdot.carry.on{fill:var(--carry)}
 .faeq{font:.9rem/1.5 var(--mono);margin:0 0 10px}
 table.truth{border-collapse:collapse;font:.86rem var(--mono);font-variant-numeric:tabular-nums;margin:0 0 8px}
 table.truth th,table.truth td{border:1px solid var(--rule);padding:3px 11px;text-align:center}
@@ -370,7 +371,7 @@ table.add td.q{color:var(--na)}
 
   <section class="tut lab-anchor" id="lab">
     <h2>The lab</h2>
-    <p>Below is the miniature ALU from the diagram above, opened up so you can see the gates. The top rows are the input registers A and B; the bottom row is the result R. Between them is a drawing of the circuit for the chosen operation: one gate or adder per bit column, with wires lit amber when they carry a 1 and carries shown in red. The page works out the result in software and lights the drawing to match, so it shows what each gate would do rather than simulating the gates themselves. Under the circuit, each flag card shows the gates that produce that flag and explains its current value.</p>
+    <p>Below is the miniature ALU from the diagram above, opened up so you can see the gates. The top rows are the input registers A and B; the bottom row is the result R. Between them is a drawing of the circuit for the chosen operation: one gate or adder per bit column, with wires lit amber when they carry a 1 and carries shown in red. The page works out the result in software and lights the drawing to match, so it shows what each gate would do rather than simulating the gates themselves. The four flags are wired into the drawing too: N is a tap off the top result bit, Z is one wide NOR across every result bit, C is the carry out of the top adder, and V is an XOR of the carry into the top adder and the carry out of it. The cards under the circuit repeat each flag's gates with an explanation of its current value.</p>
     <p>Tap a bit to flip it. Pick an operation from the buttons. Switch to 4-bit when you want fewer columns to trace by hand.</p>
   </section>
 
@@ -772,11 +773,11 @@ function renderCircuit(r){
   const svg=document.getElementById('circuit');
   svg.innerHTML='';
   const op=r.op, w=r.w;
-  const colW=46, left=58, right=58;
+  const colW=46, left=66, right=58;
   const W=left+colW*w+right;
   const unary=!!op.unary;
   const yA=22, yB=unary?null:70, yG = unary?82:130, yR = yG+ (op.kind==='arith'?98:92);
-  const H=yR+30;
+  const H=yR+106;
   svg.setAttribute('viewBox',`0 -8 ${W} ${H+8}`);
   svg.style.minWidth = w===8 ? '420px' : '0';
   const colX = i => left + colW*(w-1-i) + colW/2;   // bit i (LSB right)
@@ -879,6 +880,35 @@ function renderCircuit(r){
     }
   }
 
+  // ---- the four flags, wired from the result row and the top carries ----
+  {
+    const xTop=colX(w-1), yBot=yR+14;
+    // N: the top result bit, straight through
+    wire(svg,[[xTop,yBot],[xTop,yR+28],[left-22,yR+28]],r.n);
+    el('circle',{cx:xTop,cy:yR+28,r:3,class:'jdot'+(r.n?' on':'')},svg);
+    txt(svg,left-32,yR+28,'N','lab');
+    // Z: one wide NOR across every result bit
+    const gy=yR+40, gh=24, x0=colX(w-1)-16, x1=colX(0)+16, zx=(x0+x1)/2;
+    for(let i=0;i<w;i++) wire(svg,[[colX(i),yBot],[colX(i),gy]],r.bitsR[i]);
+    el('path',{d:`M${x0},${gy} Q${zx},${gy+6} ${x1},${gy} Q${x1},${gy+gh-4} ${zx},${gy+gh} Q${x0},${gy+gh-4} ${x0},${gy} Z`,class:'gate'},svg);
+    el('circle',{cx:zx,cy:gy+gh+3,r:3.2,class:'gate'},svg);
+    wire(svg,[[zx,gy+gh+6],[zx,gy+gh+20]],r.z);
+    txt(svg,zx,gy+gh+30,'Z','lab');
+    txt(svg,x1+10,gy+gh/2,'NOR','lab','start');
+    // V: carry into the top adder XOR carry out of it (arithmetic only)
+    if(op.kind==='arith'){
+      const cy=yG+15, cin=r.carries[w-1], cout=r.carries[w], bw2=17;
+      const midX=(colX(w-1)+bw2 + colX(w-2)-bw2)/2;
+      const gx=left-58, gyv=cy+28;
+      wire(svg,[[midX,cy],[midX,cy+22],[gx+8,cy+22],[gx+8,gyv]],cin,'carry');
+      el('circle',{cx:midX,cy:cy,r:3,class:'jdot carry'+(cin?' on':'')},svg);
+      wire(svg,[[left-36,cy],[left-36,gyv]],cout,'carry');
+      el('circle',{cx:left-36,cy:cy,r:3,class:'jdot carry'+(cout?' on':'')},svg);
+      drawGate(svg,'xor',gx,gyv);
+      wire(svg,[[gx+15,gyv+24],[gx+15,gyv+32]],r.v);
+      txt(svg,gx+15,gyv+41,'V','lab');
+    }
+  }
   // result cells
   for(let i=0;i<w;i++) bitCell(svg,colX(i),yR,r.bitsR[i],`result bit ${i}`,false);
 }
