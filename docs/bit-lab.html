@@ -786,9 +786,9 @@ function renderCircuit(r){
   const colX = i => left + colW*(w-1-i) + colW/2;   // bit i (LSB right)
 
   // row labels
-  txt(svg,left-30,yA,'A','lab');
-  if(!unary) txt(svg,left-30,yB,'B','lab');
-  txt(svg,left-30,yR,'R','lab');
+  txt(svg,W-right+30,yA,'A','lab');
+  if(!unary) txt(svg,W-right+30,yB,'B','lab');
+  txt(svg,W-right+30,yR,'R','lab');
 
   // bit index labels above A
   for(let i=0;i<w;i++) txt(svg,colX(i),-1,'b'+i,'idx');
