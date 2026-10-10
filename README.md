@@ -12,6 +12,10 @@ an in-app help page.
 arithmetic, overflow, width changes, hex, shifts, practice problems and a cheat sheet) that the
 calculator's exercise groups follow.
 
+**Bit Lab (gates, bits and flags):** https://snowch.github.io/programmer-calculator/docs/bit-lab.html
+— an interactive gate-level view of a miniature ALU: tap bits, pick an operation, and watch the wires,
+the carries and the N Z C V flags, with guided exercises.
+
 ## Files
 
 Everything is static and lives at the repository root (all paths are relative, so the app
@@ -25,6 +29,7 @@ works from any sub-path):
 | `icon-*.png` | 192 px / 512 px icons, plus maskable variants for Android |
 | `screenshots/` | Images shown in the install dialog (Android / desktop) |
 | `docs/twos-complement.html`, `docs/twos-complement.pdf` | The two's complement tutorial: print-ready HTML source and the PDF rendered from it |
+| `docs/bit-lab.html` | Bit Lab: an interactive gate-level lab on bitwise operations, binary arithmetic and the N Z C V flags |
 | `.github/workflows/pages.yml` | Deploys the site to GitHub Pages on every push to `main` |
 | `.nojekyll` | Tells GitHub Pages to publish the files as-is |
 
