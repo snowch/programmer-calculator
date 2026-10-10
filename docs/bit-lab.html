@@ -239,7 +239,7 @@ footer.site a:hover{color:var(--ink)}
 /* ---------- block diagram & full adder widget ---------- */
 svg.blockdiag{width:100%;max-width:420px;height:auto;display:block;margin:6px 0 14px}
 .fawrap{display:grid;grid-template-columns:minmax(240px,370px) minmax(0,1fr);gap:14px 26px;align-items:start;margin:10px 0 16px}
-@media (max-width:640px){.fawrap{grid-template-columns:1fr}}
+@media (max-width:640px){.fawrap{grid-template-columns:minmax(0,1fr)}}
 .fa{background:var(--paper-2);border:1px solid var(--rule);border-radius:12px;padding:8px 6px}
 .fa svg{display:block;width:100%;height:auto}
 .jdot{fill:var(--wire-off)}
@@ -250,6 +250,20 @@ table.truth th,table.truth td{border:1px solid var(--rule);padding:3px 11px;text
 table.truth th{background:var(--paper-2);font-weight:600}
 table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weight:600}
 .clk{fill:none;stroke:var(--gate-stroke);stroke-width:1.5}
+
+/* ---------- 4-bit chain widget ---------- */
+.chainwrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:640px){.chainwrap{grid-template-columns:minmax(0,1fr)}}
+#chainTable{overflow-x:auto}
+table.add th,table.add td{padding:3px 8px}
+.gate.sel{stroke:var(--focus);stroke-width:2.6}
+.fabox{cursor:pointer}
+.bit.wait rect{fill:transparent;stroke:var(--na);stroke-dasharray:3 2}
+.bit.wait text{fill:var(--na)}
+table.add td.k{text-align:left;color:var(--ink-2);font-size:.8rem;white-space:nowrap}
+table.add td.cin{color:var(--carry);font-weight:600}
+table.add tr.sum td{border-top:2px solid var(--ink-2);font-weight:600}
+table.add td.q{color:var(--na)}
 </style>
 </head>
 <body>
@@ -292,7 +306,7 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
     <h2>Learning goals</h2>
     <p>By the end of this lab you will be able to:</p>
     <ol>
-      <li>Explain why bitwise logic ops need no communication between bit columns, while addition does.</li>
+      <li>Explain why bitwise logic ops need no communication between bit positions (columns), while addition does.</li>
       <li>Trace a carry rippling through a chain of full adders and predict the result.</li>
       <li>Show how subtraction and negation are built from addition using invert-and-add-one.</li>
       <li>State what each of the N, Z, C and V flags means and which gates produce it.</li>
@@ -332,7 +346,7 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
       <tr><th>Instruction</th><th>What the ALU computes</th><th>Result goes to</th><th>Flags</th></tr>
       <tr><td><code>ADD R0, R1, R2</code></td><td>R1 + R2</td><td>register R0</td><td>N Z C V</td></tr>
       <tr><td><code>SUB R0, R1, R2</code></td><td>R1 − R2, done as R1 + NOT R2 + 1</td><td>register R0</td><td>N Z C V</td></tr>
-      <tr><td><code>AND R0, R1, R2</code></td><td>R1 AND R2, one gate per column</td><td>register R0</td><td>N Z</td></tr>
+      <tr><td><code>AND R0, R1, R2</code></td><td>R1 AND R2, one gate per bit position</td><td>register R0</td><td>N Z</td></tr>
       <tr><td><code>LSL R0, R1, #1</code></td><td>R1 shifted left one place</td><td>register R0</td><td>N Z C</td></tr>
       <tr><td><code>CMP R1, R2</code></td><td>R1 − R2, result thrown away</td><td>nowhere, only the flags</td><td>N Z C V</td></tr>
       <tr><td><code>BEQ label</code></td><td>nothing: the branch unit tests Z</td><td>the program counter, if Z = 1</td><td>reads Z</td></tr>
@@ -341,7 +355,7 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
     <p>The lab below is a miniature ALU: two input registers, the gate network for one operation at a time, a result, and the four flags.</p>
     <p><strong>Two readings of the same bits.</strong> An 8-bit pattern has no intrinsic sign. Read as <em>unsigned</em>, <code>0xFF</code> is 255. Read as <em>two's complement signed</em>, the top bit counts as −128, so <code>0xFF</code> is −1 and the range is −128…127. The hardware adds the same way regardless; the flags let software decide whether the answer is trustworthy under the reading it cares about.</p>
     <p><strong>Negation.</strong> To negate a two's complement number, invert every bit and add 1. This is why an ALU never needs a subtractor: A − B is just A + (NOT B) + 1.</p>
-    <p><strong>From gates to an ALU.</strong> Bitwise ops use one gate per column. Addition uses one <em>full adder</em> per column, and a full adder is only five gates: sum = A ⊕ B ⊕ cin and carry-out = A·B + cin·(A ⊕ B). Tap the inputs to watch them work.</p>
+    <p><strong>From gates to an ALU.</strong> Bitwise ops use one gate per bit position. Addition uses one <em>full adder</em> per bit position, and a full adder is only five gates: sum = A ⊕ B ⊕ cin and carry-out = A·B + cin·(A ⊕ B). Tap the inputs to watch them work.</p>
     <div class="fawrap">
       <div class="fa" id="fa"></div>
       <div>
@@ -350,7 +364,20 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
         <p class="tip">The highlighted row is the current input; ⊕ is XOR. The first XOR and AND form a <em>half adder</em>; the rest fold in the carry.</p>
       </div>
     </div>
-    <p>Each adder's carry-out feeds the next column's carry-in, so the result ripples from bit 0 upward. The lab below shows that chain directly, drawing each full adder as a box marked FA; the box is exactly the five gates above.</p>
+    <p><strong>Four of them make a 4-bit adder.</strong> Write A above B as in long addition: each bit position is one <em>column</em>, and each column gets its own full adder. The only wiring between columns is the carry. Each adder's carry-out is the carry-in of the column to its left, the first carry-in is tied to 0, and the last carry-out becomes the C flag. Tap an FA box to open it and see the same five gates working on that column; press <b>ripple</b> to watch the carries settle one column at a time, which is why the top bit is always the last to be ready.</p>
+    <div class="fawrap chainwrap">
+      <div>
+        <div class="fa" id="chain"></div>
+        <div class="row" style="margin:8px 0 0"><button class="small" id="chainRipple" type="button">ripple</button><span class="tip" style="margin:0">tap A or B bits to change the sum, tap an FA box to open it</span></div>
+        <div id="chainTable" style="margin-top:12px"></div>
+        <p class="tip">The same sum written as long addition. The red row is the carry into each column, and the C column is the carry out of bit 3, the C flag.</p>
+      </div>
+      <div>
+        <div class="fa" id="chainFA"></div>
+        <p class="tip" id="chainNote"></p>
+      </div>
+    </div>
+    <p>The lab below shows the same chain at 8 bits, drawing each full adder as a box marked FA; every box is the five gates above.</p>
     <p><strong>From gates to a register.</strong> Every gate so far forgets its inputs the moment they change; the full adder has no memory at all. Memory comes from <em>feedback</em>. Wire two NOR gates so that each one's output is an input of the other, and the pair has two stable states that it holds for as long as the power is on. An inverter and two AND gates in front turn the pair into a <em>D latch</em>: while enable is 1, Q copies D; the moment enable drops to 0, the latch keeps whatever it last saw. Try it: with enable on, set D; turn enable off; now change D and watch Q stay put.</p>
     <div class="fawrap">
       <div class="fa" id="latch"></div>
@@ -1077,12 +1104,10 @@ document.querySelectorAll('[data-ex]').forEach(b=>b.addEventListener('click',()=
 })();
 
 /* ---------- one full adder, gate by gate ---------- */
-const fa={a:1,b:1,c:0};
-function renderFA(){
-  const host=document.getElementById('fa'); if(!host) return;
+function drawFullAdder(host,a,b,c,onToggle){
   host.innerHTML='';
   const svg=el('svg',{viewBox:'0 0 360 262',xmlns:NS,'aria-label':'One full adder: two XOR gates, two AND gates and one OR gate'},host);
-  const {a,b,c}=fa, p=a^b, g=a&b, pc=p&c, s=p^c, co=g|pc;
+  const p=a^b, g=a&b, pc=p&c, s=p^c, co=g|pc, ed=!!onToggle;
   const dot=(x,y,on)=>el('circle',{cx:x,cy:y,r:3,class:'jdot'+(on?' on':'')},svg);
   txt(svg,50,8,'A','lab'); txt(svg,110,8,'B','lab'); txt(svg,250,8,'carry in','lab');
   wire(svg,[[50,40],[50,50],[73,50],[73,70]],a); wire(svg,[[50,44],[133,44],[133,70]],a); dot(50,44,a);
@@ -1095,11 +1120,18 @@ function renderFA(){
   drawGate(svg,'xor',65,70); drawGate(svg,'and',125,70); drawGate(svg,'xor',65,150); drawGate(svg,'and',179,150); drawGate(svg,'or',280,200);
   txt(svg,100,82,'XOR','lab','start'); txt(svg,160,78,'AND','lab','start'); txt(svg,100,162,'XOR','lab','start'); txt(svg,214,162,'AND','lab','start'); txt(svg,316,212,'OR','lab','start');
   txt(svg,120,118,'A ⊕ B','lab','start'); txt(svg,306,150,'A · B','lab','start');
-  bitCell(svg,50,26,a,'A',true,()=>{fa.a^=1;renderFA();});
-  bitCell(svg,110,26,b,'B',true,()=>{fa.b^=1;renderFA();});
-  bitCell(svg,250,26,c,'carry in',true,()=>{fa.c^=1;renderFA();});
+  bitCell(svg,50,26,a,'A',ed,()=>onToggle('a'));
+  bitCell(svg,110,26,b,'B',ed,()=>onToggle('b'));
+  bitCell(svg,250,26,c,'carry in',ed,()=>onToggle('c'));
   bitCell(svg,80,214,s,'sum',false); txt(svg,100,214,'sum','lab','start');
   bitCell(svg,295,246,co,'carry out',false); txt(svg,275,246,'carry out','lab','end');
+  return {s,co};
+}
+const fa={a:1,b:1,c:0};
+function renderFA(){
+  const host=document.getElementById('fa'); if(!host) return;
+  const {a,b,c}=fa;
+  const {s,co}=drawFullAdder(host,a,b,c,k=>{fa[k]^=1;renderFA();});
   document.getElementById('faEq').innerHTML=`sum = A ⊕ B ⊕ cin = <b>${s}</b><br>carry out = A·B + cin·(A ⊕ B) = <b>${co}</b>`;
   let t='<table class="truth"><tr><th>A</th><th>B</th><th>cin</th><th>sum</th><th>cout</th></tr>';
   for(let i=0;i<8;i++){
@@ -1109,6 +1141,61 @@ function renderFA(){
   document.getElementById('faTable').innerHTML=t+'</table>';
 }
 renderFA();
+
+/* ---------- four full adders make a 4-bit adder ---------- */
+const chain={a:[1,1,1,0],b:[1,0,0,0],sel:0,stage:4,timer:null};
+function chainCalc(){
+  const c=[0], s=[];
+  for(let i=0;i<4;i++){ const x=chain.a[i], y=chain.b[i], ci=c[i]; s.push(x^y^ci); c.push((x&y)|(ci&(x^y))); }
+  return {s,c};
+}
+function renderChain(){
+  const host=document.getElementById('chain'); if(!host) return;
+  host.innerHTML='';
+  const {s,c}=chainCalc(), w=4, colW=72, left=66, W=424, yA=22, yB=66, by=104, bw=34, bh=30, yR=176, H=200;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,xmlns:NS,'aria-label':'Four full adders chained into a 4-bit ripple-carry adder'},host);
+  const colX=i=>left+colW*(w-1-i)+colW/2;
+  txt(svg,left-34,yA,'A','lab'); txt(svg,left-34,yB,'B','lab'); txt(svg,left-34,yR,'sum','lab');
+  for(let i=0;i<w;i++){
+    const x=colX(i), settled=i<chain.stage, bx=x-bw/2, cy=by+bh/2;
+    txt(svg,x,5,'bit '+i,'idx');
+    wire(svg,[[x-8,yA+14],[x-8,by]],chain.a[i]);
+    wire(svg,[[x+8,yB+14],[x+8,by]],chain.b[i]);
+    const cout=c[i+1], toX=(i===w-1)?left-28:colX(i+1)+bw/2;
+    wire(svg,[[bx,cy],[toX,cy]],settled&&cout,'carry');
+    txt(svg,(bx+toX)/2,cy-8,settled?String(cout):'?','cv '+(settled&&cout?'on':'off'));
+    if(i===w-1) txt(svg,left-38,cy,'C','lab');
+    if(i===0){ wire(svg,[[bx+bw,cy],[bx+bw+26,cy]],0,'carry'); txt(svg,bx+bw+13,cy-8,'0','cv off'); txt(svg,bx+bw+38,cy,'cin','lab'); }
+    wire(svg,[[x,by+bh],[x,yR-14]],settled&&s[i]);
+    const box=el('rect',{x:bx,y:by,width:bw,height:bh,rx:4,class:'gate fabox'+(i===chain.sel?' sel':''),tabindex:'0',role:'button','aria-label':`open full adder for bit ${i}`},svg);
+    box.addEventListener('click',()=>{chain.sel=i;renderChain();});
+    box.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();chain.sel=i;renderChain();} });
+    const fl=txt(svg,x,cy+1,'FA','lab'); fl.style.pointerEvents='none';
+    bitCell(svg,x,yA,chain.a[i],`A bit ${i}`,true,()=>{chain.a[i]^=1;chain.stage=4;renderChain();});
+    bitCell(svg,x,yB,chain.b[i],`B bit ${i}`,true,()=>{chain.b[i]^=1;chain.stage=4;renderChain();});
+    const cell=bitCell(svg,x,yR,settled?s[i]:0,`sum bit ${i}`,false);
+    if(!settled){ cell.classList.add('wait'); cell.querySelector('text').textContent='?'; }
+  }
+  const k=chain.sel;
+  drawFullAdder(document.getElementById('chainFA'),chain.a[k],chain.b[k],c[k],null);
+  const from = k===0 ? 'the cin wire, tied to 0' : `bit ${k-1}`;
+  const to = k===3 ? 'the C flag' : `bit ${k+1}`;
+  document.getElementById('chainNote').innerHTML=`<b>Bit ${k} opened.</b> Its inputs are A = ${chain.a[k]}, B = ${chain.b[k]} and a carry in of ${c[k]} from ${from}. It produces sum ${s[k]} and a carry out of ${c[k+1]}, which goes to ${to}.`;
+  const q=(v,i)=> i<chain.stage ? String(v) : '<span class="q">?</span>';
+  const cols=[3,2,1,0];
+  let t='<table class="truth add"><tr><th></th>'+cols.map(i=>`<th>bit ${i}</th>`).join('')+'<th>C</th></tr>';
+  t+='<tr><td class="k">carry in</td>'+cols.map(i=>`<td class="cin">${q(c[i],i)}</td>`).join('')+'<td></td></tr>';
+  t+='<tr><td class="k">A</td>'+cols.map(i=>`<td>${chain.a[i]}</td>`).join('')+'<td></td></tr>';
+  t+='<tr><td class="k">+ B</td>'+cols.map(i=>`<td>${chain.b[i]}</td>`).join('')+'<td></td></tr>';
+  t+='<tr class="sum"><td class="k">= sum</td>'+cols.map(i=>`<td>${q(s[i],i)}</td>`).join('')+`<td class="cin">${q(c[4],3)}</td></tr></table>`;
+  document.getElementById('chainTable').innerHTML=t;
+}
+document.getElementById('chainRipple').addEventListener('click',()=>{
+  if(chain.timer) clearInterval(chain.timer);
+  chain.stage=0; renderChain();
+  chain.timer=setInterval(()=>{ chain.stage++; renderChain(); if(chain.stage>=4){ clearInterval(chain.timer); chain.timer=null; } },550);
+});
+renderChain();
 
 /* ---------- gates drawn sideways: inputs on the left, output on the right ---------- */
 function gateR(parent,type,cx,cy){
