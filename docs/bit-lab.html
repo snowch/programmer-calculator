@@ -364,7 +364,7 @@ table.add td.q{color:var(--na)}
         <p class="tip">The highlighted row is the current input; ⊕ is XOR. The first XOR and AND form a <em>half adder</em>; the rest fold in the carry.</p>
       </div>
     </div>
-    <p><strong>Four of them make a 4-bit adder.</strong> Write A above B as in long addition: each bit position is one <em>column</em>, and each column gets its own full adder. The only wiring between columns is the carry. Each adder's carry-out is the carry-in of the column to its left, the first carry-in is tied to 0, and the last carry-out becomes the C flag. Tap an FA box to open it and see the same five gates working on that column; press <b>ripple</b> to watch the carries settle one column at a time, which is why the top bit is always the last to be ready.</p>
+    <p><strong>Four of them make a 4-bit adder.</strong> Write A above B as in long addition: each bit position is one <em>column</em>, and each column gets its own full adder, drawn below as a box marked <b>FA</b> (short for full adder). The only wiring between columns is the carry. Each adder's carry-out is the carry-in of the column to its left, the first carry-in is tied to 0, and the last carry-out becomes the C flag. Tap one of the FA boxes to open it and see the same five gates working on that column; press <b>ripple</b> to watch the carries settle one column at a time, which is why the top bit is always the last to be ready.</p>
     <div class="fawrap chainwrap">
       <div>
         <div class="fa" id="chain"></div>
