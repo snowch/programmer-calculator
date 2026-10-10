@@ -825,7 +825,7 @@ function renderCircuit(r){
   txt(svg,left-30,yR,'R','lab');
 
   // bit index labels above A
-  for(let i=0;i<w;i++) txt(svg,colX(i),4,'b'+i,'idx');
+  for(let i=0;i<w;i++) txt(svg,colX(i),-1,'b'+i,'idx');
 
   // input cells
   for(let i=0;i<w;i++){
@@ -1109,7 +1109,7 @@ function drawFullAdder(host,a,b,c,onToggle){
   const svg=el('svg',{viewBox:'0 -12 360 274',xmlns:NS,'aria-label':'One full adder: two XOR gates, two AND gates and one OR gate'},host);
   const p=a^b, g=a&b, pc=p&c, s=p^c, co=g|pc, ed=!!onToggle;
   const dot=(x,y,on)=>el('circle',{cx:x,cy:y,r:3,class:'jdot'+(on?' on':'')},svg);
-  txt(svg,50,8,'A','lab'); txt(svg,110,8,'B','lab'); txt(svg,250,8,'carry in','lab');
+  txt(svg,50,-1,'A','lab'); txt(svg,110,-1,'B','lab'); txt(svg,250,-1,'carry in','lab');
   wire(svg,[[50,40],[50,50],[73,50],[73,70]],a); wire(svg,[[50,44],[133,44],[133,70]],a); dot(50,44,a);
   wire(svg,[[110,40],[110,56],[87,56],[87,70]],b); wire(svg,[[110,56],[147,56],[147,70]],b); dot(110,56,b);
   wire(svg,[[80,94],[80,110],[73,110],[73,150]],p); wire(svg,[[80,110],[187,110],[187,150]],p); dot(80,110,p);
@@ -1158,7 +1158,7 @@ function renderChain(){
   txt(svg,left-34,yA,'A','lab'); txt(svg,left-34,yB,'B','lab'); txt(svg,left-34,yR,'sum','lab');
   for(let i=0;i<w;i++){
     const x=colX(i), settled=i<chain.stage, bx=x-bw/2, cy=by+bh/2;
-    txt(svg,x,5,'bit '+i,'idx');
+    txt(svg,x,-3,'bit '+i,'idx');
     wire(svg,[[x-8,yA+14],[x-8,by]],chain.a[i]);
     wire(svg,[[x+8,yB+14],[x+8,by]],chain.b[i]);
     const cout=c[i+1], toX=(i===w-1)?left-28:colX(i+1)+bw/2;
@@ -1230,7 +1230,7 @@ function renderLatch(){
   gateR(svg,'not',100,50); gateR(svg,'and',150,62); gateR(svg,'and',150,150); gateR(svg,'nor',250,69); gateR(svg,'nor',250,143);
   txt(svg,100,30,'NOT','lab'); txt(svg,150,38,'AND','lab'); txt(svg,150,174,'AND','lab'); txt(svg,250,45,'NOR','lab'); txt(svg,250,167,'NOR','lab');
   txt(svg,200,53,'R = ¬D·E','lab'); txt(svg,200,160,'S = D·E','lab');
-  txt(svg,36,48,'D','lab'); txt(svg,36,143,'enable','lab'); txt(svg,320,47,'Q','lab'); txt(svg,320,166,'¬Q','lab');
+  txt(svg,36,43,'D','lab'); txt(svg,36,138,'enable','lab'); txt(svg,320,42,'Q','lab'); txt(svg,320,170,'¬Q','lab');
   bitCell(svg,36,70,d,'D',true,()=>{latch.d^=1;renderLatch();});
   bitCell(svg,36,165,e,'enable',true,()=>{latch.e^=1;renderLatch();});
   bitCell(svg,320,69,q,'Q',false); bitCell(svg,320,143,nq,'not Q',false);
@@ -1251,7 +1251,7 @@ function renderReg(){
   wire(svg,[[56,110],[318,110]],reg.load); txt(svg,324,110,'load','lab sm','start');
   xs.forEach((x,i)=>{
     const b=3-i, dv=reg.d[b], qv=reg.q[b];
-    txt(svg,x,8,'b'+b,'idx');
+    txt(svg,x,3,'b'+b,'idx');
     wire(svg,[[x,44],[x,74]],dv);
     el('rect',{x:x-20,y:74,width:40,height:40,rx:4,class:'gate'},svg);
     txt(svg,x,83,'D','idx'); txt(svg,x,95,'DFF','lab'); txt(svg,x,107,'Q','idx');
