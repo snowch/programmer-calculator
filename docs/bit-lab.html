@@ -299,7 +299,7 @@ table.add td.q{color:var(--na)}
       </ol>
       <details><summary>Answers</summary><p>1. <code>0b0010</code>. &nbsp;2. 255 (<code>0xFF</code>). &nbsp;3. 0.</p></details>
     </div>
-    <p>You do <strong>not</strong> need to know what an ALU is, what a flag is, or anything about two's complement. The background section introduces all three.</p>
+    <p>You do <strong>not</strong> need to know what an ALU is, what a flag is, what a clock does, or anything about two's complement. The background section introduces all of them.</p>
   </section>
 
   <section class="tut" id="goals">
@@ -379,7 +379,7 @@ table.add td.q{color:var(--na)}
     </div>
     <p>The lab below shows the same chain at 8 bits, drawing each full adder as a box marked FA; every box is the five gates above.</p>
     <p><strong>From gates to a register.</strong> The ALU needs no memory. A gate is <em>combinational</em>: its output depends only on what its inputs are right now, so change an input and the output follows. The adders and the whole ALU inherit that.</p>
-    <p><strong>Where memory is needed.</strong> The registers on either side of the ALU must hold their bits from one clock edge to the next. There is no special memory part inside them. A register is made of the same kinds of gates as the ALU, here NOT, AND and NOR, wired in a different way: an output is led back round to become an input, so the circuit can hold itself in a state. That loop is called <em>feedback</em>.</p>
+    <p><strong>Where memory is needed.</strong> The registers on either side of the ALU must hold their bits steady while the gates work on them, and keep them until a new value is written. There is no special memory part inside them. A register is made of the same kinds of gates as the ALU, here NOT, AND and NOR, wired in a different way: an output is led back round to become an input, so the circuit can hold itself in a state. That loop is called <em>feedback</em>.</p>
     <p><strong>The smallest memory: two NOR gates.</strong> Wire two NOR gates so that each one's output is an input of the other, and the pair has two stable states that it holds for as long as the power is on.</p>
     <p><strong>Adding a data input and an enable.</strong> An inverter and two AND gates in front turn the pair into a <em>D latch</em>: while enable is 1, Q copies D; the moment enable drops to 0, the latch keeps whatever it last saw. Try it: with enable on, set D; turn enable off; now change D and watch Q stay put.</p>
     <div class="fawrap">
@@ -390,7 +390,7 @@ table.add td.q{color:var(--na)}
         <p class="tip">S = D·enable sets the pair and R = ¬D·enable resets it. With enable at 0 neither can fire, and the two NOR gates simply keep holding each other's output in place.</p>
       </div>
     </div>
-    <p>A register is a row of these cells, one per bit, sharing one enable line. Real CPUs use a sharper version, the edge-triggered <em>D flip-flop</em>: two latches back to back, arranged so that Q changes only at the instant the clock rises and never "sees through" while the clock is high. Four flip-flops with a shared clock and a load line make a 4-bit register, and the 74HC173 in the build section is exactly that. Set the D bits, then press the clock:</p>
+    <p>A register is a row of these cells, one per bit, sharing one enable line. In a CPU that enable comes from the <em>clock</em>: a signal that swings between 0 and 1 billions of times a second and paces everything. The instant it rises, called the <em>clock edge</em>, is the one moment when registers may take in a new value; between edges they hold still while the gates settle. Real CPUs use a sharper cell than the latch for this, the edge-triggered <em>D flip-flop</em>: two latches back to back, arranged so that Q changes only at the rising edge and never "sees through" while the clock is high. Four flip-flops with a shared clock and a load line make a 4-bit register, and the 74HC173 in the build section is exactly that. Set the D bits, then press the clock:</p>
     <div class="fawrap">
       <div class="fa" id="reg"></div>
       <div>
