@@ -662,6 +662,7 @@ table.add td.q{color:var(--na)}
   <section class="tut" id="next">
     <h2>What's next</h2>
     <ul>
+      <li>Carry on from signals to a working CPU in the <a href="https://snowch.github.io/digital-design/">Digital Design course</a>, which has lessons on gates, the ALU, registers, flags and instructions.</li>
       <li>Build the bench version above, then swap the 74HC283 for the four gate-built adders of step 2 and watch a real ripple.</li>
       <li>Put a multiplexer in front of the adder so one circuit can do ADD, SUB, AND and OR — that's the ALU in Harris &amp; Harris, chapter 5, and the Nand2Tetris ALU in project 2.</li>
       <li>Build the comparison branches from the quiz (signed less-than = N ⊕ V, unsigned less-than = NOT C) and you have the condition logic a CPU uses for <code>if</code> and loops.</li>
@@ -1193,7 +1194,8 @@ function renderChain(){
   t+='<tr class="sum"><td class="k">= sum</td>'+`<td class="cin">${q(c[4],3)}</td>`+cols.map(i=>`<td>${q(s[i],i)}</td>`).join('')+'</tr></table>';
   document.getElementById('chainTable').innerHTML=t;
 }
-document.getElementById('chainRipple').addEventListener('click',()=>{
+const chainRippleBtn=document.getElementById('chainRipple');
+if(chainRippleBtn) chainRippleBtn.addEventListener('click',()=>{
   if(chain.timer) clearInterval(chain.timer);
   chain.stage=0; renderChain();
   chain.timer=setInterval(()=>{ chain.stage++; renderChain(); if(chain.stage>=4){ clearInterval(chain.timer); chain.timer=null; } },550);
@@ -1265,15 +1267,17 @@ function renderReg(){
   });
   const val=a=>a.slice().reverse().join('');
   document.getElementById('regNote').innerHTML=`D = ${val(reg.d)} &nbsp; Q = <strong>${val(reg.q)}</strong><br><span class="small-note">${reg.note}</span>`;
-  document.getElementById('regLoad').setAttribute('aria-pressed', reg.load?'true':'false');
+  const rl=document.getElementById('regLoad'); if(rl) rl.setAttribute('aria-pressed', reg.load?'true':'false');
 }
-document.getElementById('regClock').addEventListener('click',()=>{
+const regClockBtn=document.getElementById('regClock');
+if(regClockBtn) regClockBtn.addEventListener('click',()=>{
   if(reg.load){ reg.q=reg.d.slice(); reg.note='Rising edge with load = 1: every flip-flop copied its D into Q.'; }
   else { reg.note='Rising edge with load = 0: the edge was ignored and Q kept its value.'; }
   reg.pulse=1; renderReg();
   setTimeout(()=>{reg.pulse=0;renderReg();},350);
 });
-document.getElementById('regLoad').addEventListener('click',()=>{ reg.load^=1; reg.note=reg.load?'load = 1: the next clock edge will copy D.':'load = 0: clock edges are ignored; Q holds.'; renderReg(); });
+const regLoadBtn=document.getElementById('regLoad');
+if(regLoadBtn) regLoadBtn.addEventListener('click',()=>{ reg.load^=1; reg.note=reg.load?'load = 1: the next clock edge will copy D.':'load = 0: clock edges are ignored; Q holds.'; renderReg(); });
 renderReg();
 
 function update(){
