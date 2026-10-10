@@ -899,7 +899,7 @@ function renderCircuit(r){
     wire(svg,[[zx,gy+gh+6],[zx,gy+gh+20]],r.z);
     txt(svg,zx,gy+gh+30,'Z','lab');
     txt(svg,zx+11,gy+gh+13,String(r.z),'fv '+(r.z?'on':'off'));
-    txt(svg,x1+10,gy+gh/2,'NOR','lab','start');
+    txt(svg,x1+10,gy+gh/2,'NOR of R','lab','start');
     // V: carry into the top adder XOR carry out of it (arithmetic only)
     if(op.kind==='arith'){
       const cy=yG+15, cin=r.carries[w-1], cout=r.carries[w], bw2=17;
