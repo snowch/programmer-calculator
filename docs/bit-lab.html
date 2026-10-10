@@ -396,7 +396,7 @@ table.add td.q{color:var(--na)}
         <p class="tip">Between clock edges the D inputs can change freely; nothing reaches Q until the next edge. With load off, the edge is ignored. That is how a CPU writes one register and leaves all the others alone: every register sees the same clock, but only the chosen one has its load line raised.</p>
       </div>
     </div>
-    <p><strong>The flags.</strong> After an operation the ALU records four one-bit facts, which conditional branches then test:</p>
+    <p><strong>The flags.</strong> After an operation the ALU records four one-bit facts, which conditional branches then test. They are four separate stored bits, not one four-way value: each flag has its own flip-flop, loaded at the same clock edge as the result, and any combination can be set at once. <code>0x80 + 0x80</code> sets C and V together, and <code>0xFF + 1</code> sets Z and C. Real CPUs keep these four bits inside a wider <em>status register</em> next to things like interrupt and mode bits; on ARM it is 32 bits wide with N, Z, C and V as its top four.</p>
     <table>
       <tr><th>Flag</th><th>Meaning</th><th>Built from</th></tr>
       <tr><td>N</td><td>result is negative when read as signed</td><td>result's top bit, straight through</td></tr>
