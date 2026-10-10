@@ -178,6 +178,9 @@ svg text{font-family:var(--mono);fill:var(--ink)}
 .cv{font-size:10.5px;font-weight:600}
 .cv.on{fill:var(--carry)}
 .cv.off{fill:var(--ink-2)}
+.fv{font-size:10.5px;font-weight:600}
+.fv.on{fill:var(--wire-on)}
+.fv.off{fill:var(--ink-2)}
 .cnst{font-size:11px;fill:var(--ink-2)}
 .tip{color:var(--ink-2);font-size:.82rem;margin:8px 0 0}
 
@@ -887,6 +890,7 @@ function renderCircuit(r){
     wire(svg,[[xTop,yBot],[xTop,yR+28],[left-22,yR+28]],r.n);
     el('circle',{cx:xTop,cy:yR+28,r:3,class:'jdot'+(r.n?' on':'')},svg);
     txt(svg,left-32,yR+28,'N','lab');
+    txt(svg,left-12,yR+19,String(r.n),'fv '+(r.n?'on':'off'));
     // Z: one wide NOR across every result bit
     const gy=yR+40, gh=24, x0=colX(w-1)-16, x1=colX(0)+16, zx=(x0+x1)/2;
     for(let i=0;i<w;i++) wire(svg,[[colX(i),yBot],[colX(i),gy]],r.bitsR[i]);
@@ -894,6 +898,7 @@ function renderCircuit(r){
     el('circle',{cx:zx,cy:gy+gh+3,r:3.2,class:'gate'},svg);
     wire(svg,[[zx,gy+gh+6],[zx,gy+gh+20]],r.z);
     txt(svg,zx,gy+gh+30,'Z','lab');
+    txt(svg,zx+11,gy+gh+13,String(r.z),'fv '+(r.z?'on':'off'));
     txt(svg,x1+10,gy+gh/2,'NOR','lab','start');
     // V: carry into the top adder XOR carry out of it (arithmetic only)
     if(op.kind==='arith'){
@@ -907,6 +912,7 @@ function renderCircuit(r){
       drawGate(svg,'xor',gx,gyv);
       wire(svg,[[gx+15,gyv+24],[gx+15,gyv+32]],r.v);
       txt(svg,gx+15,gyv+41,'V','lab');
+      txt(svg,gx+26,gyv+29,String(r.v),'fv '+(r.v?'on':'off'));
     }
   }
   // result cells
