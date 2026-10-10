@@ -370,7 +370,7 @@ table.add td.q{color:var(--na)}
         <div class="fa" id="chain"></div>
         <div class="row" style="margin:8px 0 0"><button class="small" id="chainRipple" type="button">ripple</button><span class="tip" style="margin:0">tap A or B bits to change the sum, tap an FA box to open it</span></div>
         <div id="chainTable" style="margin-top:12px"></div>
-        <p class="tip">The same sum written as long addition. The red row is the carry into each column, and the C column is the carry out of bit 3, the C flag.</p>
+        <p class="tip">The same sum written as long addition. The red row is the carry into each column. The carry out of bit 3 lands in the C column on the left, as the fifth digit of the answer would on paper; in the machine it becomes the C flag.</p>
       </div>
       <div>
         <div class="fa" id="chainFA"></div>
@@ -1183,11 +1183,11 @@ function renderChain(){
   document.getElementById('chainNote').innerHTML=`<b>Bit ${k} opened.</b> Its inputs are A = ${chain.a[k]}, B = ${chain.b[k]} and a carry in of ${c[k]} from ${from}. It produces sum ${s[k]} and a carry out of ${c[k+1]}, which goes to ${to}.`;
   const q=(v,i)=> i<chain.stage ? String(v) : '<span class="q">?</span>';
   const cols=[3,2,1,0];
-  let t='<table class="truth add"><tr><th></th>'+cols.map(i=>`<th>bit ${i}</th>`).join('')+'<th>C</th></tr>';
-  t+='<tr><td class="k">carry in</td>'+cols.map(i=>`<td class="cin">${q(c[i],i)}</td>`).join('')+'<td></td></tr>';
-  t+='<tr><td class="k">A</td>'+cols.map(i=>`<td>${chain.a[i]}</td>`).join('')+'<td></td></tr>';
-  t+='<tr><td class="k">+ B</td>'+cols.map(i=>`<td>${chain.b[i]}</td>`).join('')+'<td></td></tr>';
-  t+='<tr class="sum"><td class="k">= sum</td>'+cols.map(i=>`<td>${q(s[i],i)}</td>`).join('')+`<td class="cin">${q(c[4],3)}</td></tr></table>`;
+  let t='<table class="truth add"><tr><th></th><th>C</th>'+cols.map(i=>`<th>bit ${i}</th>`).join('')+'</tr>';
+  t+='<tr><td class="k">carry in</td><td></td>'+cols.map(i=>`<td class="cin">${q(c[i],i)}</td>`).join('')+'</tr>';
+  t+='<tr><td class="k">A</td><td></td>'+cols.map(i=>`<td>${chain.a[i]}</td>`).join('')+'</tr>';
+  t+='<tr><td class="k">+ B</td><td></td>'+cols.map(i=>`<td>${chain.b[i]}</td>`).join('')+'</tr>';
+  t+='<tr class="sum"><td class="k">= sum</td>'+`<td class="cin">${q(c[4],3)}</td>`+cols.map(i=>`<td>${q(s[i],i)}</td>`).join('')+'</tr></table>';
   document.getElementById('chainTable').innerHTML=t;
 }
 document.getElementById('chainRipple').addEventListener('click',()=>{
