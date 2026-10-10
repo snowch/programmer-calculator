@@ -14,7 +14,8 @@ calculator's exercise groups follow.
 
 **Bit Lab (gates, bits and flags):** https://snowch.github.io/programmer-calculator/docs/bit-lab.html
 — an interactive gate-level view of a miniature ALU: tap bits, pick an operation, and watch the wires,
-the carries and the N Z C V flags, with guided exercises.
+the carries and the N Z C V flags. Includes a full adder built from five gates, a table of example
+instructions, guided exercises, and a breadboard build guide with a schematic.
 
 ## Files
 
