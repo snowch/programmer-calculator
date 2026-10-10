@@ -249,6 +249,7 @@ table.truth{border-collapse:collapse;font:.86rem var(--mono);font-variant-numeri
 table.truth th,table.truth td{border:1px solid var(--rule);padding:3px 11px;text-align:center}
 table.truth th{background:var(--paper-2);font-weight:600}
 table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weight:600}
+.clk{fill:none;stroke:var(--gate-stroke);stroke-width:1.5}
 </style>
 </head>
 <body>
@@ -260,7 +261,7 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
     </div>
     <button class="small themebtn" id="themeBtn" type="button">theme: auto</button>
   </div>
-  <div class="meta"><span>Level: beginner digital design</span><span>Time: 45–60 min</span><span>Needs: nothing to install</span></div>
+  <div class="meta"><span>Level: beginner digital design</span><span>Time: 60–90 min</span><span>Needs: nothing to install</span></div>
   <nav class="toc" aria-label="Contents">
     <a href="#prereq">Prerequisites</a><a href="#goals">Learning goals</a><a href="#background">Background</a>
     <a href="#lab">The lab</a><a href="#exercises">Exercises</a><a href="#quiz">Check yourself</a><a href="#build">Build it</a><a href="#next">What's next</a>
@@ -296,6 +297,7 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
       <li>State what each of the N, Z, C and V flags means and which gates produce it.</li>
       <li>Distinguish unsigned overflow (C) from signed overflow (V), and predict both for a given addition.</li>
       <li>Describe what the three kinds of shift do to the bits and to the carry flag.</li>
+      <li>Explain how two cross-coupled gates store a bit, and why a register copies its input only on a clock edge.</li>
     </ol>
   </section>
 
@@ -348,6 +350,24 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
       </div>
     </div>
     <p>Each adder's carry-out feeds the next column's carry-in, so the result ripples from bit 0 upward. The lab below shows that chain directly, drawing each full adder as a box marked FA; the box is exactly the five gates above.</p>
+    <p><strong>From gates to a register.</strong> Every gate so far forgets its inputs the moment they change; the full adder has no memory at all. Memory comes from <em>feedback</em>. Wire two NOR gates so that each one's output is an input of the other, and the pair has two stable states that it holds for as long as the power is on. An inverter and two AND gates in front turn the pair into a <em>D latch</em>: while enable is 1, Q copies D; the moment enable drops to 0, the latch keeps whatever it last saw. Try it: with enable on, set D; turn enable off; now change D and watch Q stay put.</p>
+    <div class="fawrap">
+      <div class="fa" id="latch"></div>
+      <div>
+        <p class="faeq" id="latchNote"></p>
+        <table class="truth"><tr><th>enable</th><th>D</th><th>Q</th></tr><tr><td>0</td><td>×</td><td>holds</td></tr><tr><td>1</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1</td><td>1</td></tr></table>
+        <p class="tip">S = D·enable sets the pair and R = ¬D·enable resets it. With enable at 0 neither can fire, and the two NOR gates simply keep holding each other's output in place.</p>
+      </div>
+    </div>
+    <p>A register is a row of these cells, one per bit, sharing one enable line. Real CPUs use a sharper version, the edge-triggered <em>D flip-flop</em>: two latches back to back, arranged so that Q changes only at the instant the clock rises and never "sees through" while the clock is high. Four flip-flops with a shared clock and a load line make a 4-bit register, and the 74HC173 in the build section is exactly that. Set the D bits, then press the clock:</p>
+    <div class="fawrap">
+      <div class="fa" id="reg"></div>
+      <div>
+        <div class="row" style="margin:0 0 10px"><button class="small" id="regClock" type="button">clock ▲</button><button class="small" id="regLoad" type="button" aria-pressed="true">load</button></div>
+        <p class="faeq" id="regNote"></p>
+        <p class="tip">Between clock edges the D inputs can change freely; nothing reaches Q until the next edge. With load off, the edge is ignored. That is how a CPU writes one register and leaves all the others alone: every register sees the same clock, but only the chosen one has its load line raised.</p>
+      </div>
+    </div>
     <p><strong>The flags.</strong> After an operation the ALU records four one-bit facts, which conditional branches then test:</p>
     <table>
       <tr><th>Flag</th><th>Meaning</th><th>Built from</th></tr>
@@ -576,7 +596,7 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
       <li><strong>One full adder from five gates.</strong> Wire the circuit from the Background section with three chips: a 74HC86 (four XOR gates), a 74HC08 (four AND gates) and a 74HC32 (four OR gates). Three switches give A, B and carry-in, each with a 10 kΩ resistor to ground so an open switch reads 0; two LEDs show sum and carry-out. Flick through all eight rows of the truth table. You have built the box the lab draws as FA.</li>
       <li><strong>Four of them make the adder.</strong> Chain four full adders, each carry-out into the next carry-in and the first carry-in to ground, and you have the ripple-carry adder the lab draws: that is two 74HC86, two 74HC08 and one 74HC32. Or buy the same four adders in one chip, the 74HC283. Either way, two 4-way DIP switches feed A and B, and five LEDs show the sums and the carry-out. Set A to <code>0111</code> and B to <code>0001</code>: the sum LEDs show <code>1000</code> the instant the switch closes. There is no clock and no "run"; the outputs just follow the inputs, which is all "ALU" means. Set A to <code>1111</code> and B to <code>0001</code> and the sums go dark while the carry-out LED lights. That LED is the C flag, and on the 74HC283 it is literally pin 9. The LED on S3 is N. The DIP switches are registers you load by hand.</li>
       <li><strong>Subtraction and the other flags.</strong> Insert a 74HC86 between the B switches and the adder, with a SUB switch on the second input of every gate and on the adder's carry-in. SUB off passes B through; SUB on inverts B and the carry-in adds the 1, so the adder computes A + NOT B + 1, which is A − B. For Z, feed the four sum lines into one gate of a 74HC4002 (a 4-input NOR) and light an LED from its output. For V, overflow means the two numbers entering the adder had the same top bit and the sum's top bit differs: with spare XOR gates and one AND gate from a 74HC08, compute XNOR(A3, B′3) AND XOR(A3, S3), where B′3 is the bit-3 XOR output, the operand the adder actually sees.</li>
-      <li><strong>Registers: the numbers stay put.</strong> Put a 74HC173, a 4-bit D register, between each DIP switch and the adder: switches into its D inputs, its Q outputs into the adder and four LEDs, and one push button on the clock pin of both chips. Set the switches to <code>0111</code> and press the button: the register LEDs show <code>0111</code>. Now flip the switches to anything else; the register LEDs do not move. The chip is remembering, and that is the whole of what a register is. Its load-enable pins decide whether a press changes it. The adder now works on "registers A and B", the block diagram at the top of this page, and in this build you are the control unit: the SUB switch is an operation line, and each press of the clock executes one instruction.</li>
+      <li><strong>Registers: the numbers stay put.</strong> Put a 74HC173, a 4-bit D register, between each DIP switch and the adder: switches into its D inputs, its Q outputs into the adder and four LEDs, and one push button on the clock pin of both chips. Set the switches to <code>0111</code> and press the button: the register LEDs show <code>0111</code>. Now flip the switches to anything else; the register LEDs do not move. The chip is remembering, and that is the whole of what a register is. Its load-enable pins decide whether a press changes it. To see the memory in pure gates first, wire the D latch from the Background section with a 74HC02 (four NOR gates), a 74HC08 and a 74HC04 inverter; the 74HC173 is four sharper versions of that cell. The adder now works on "registers A and B", the block diagram at the top of this page, and in this build you are the control unit: the SUB switch is an operation line, and each press of the clock executes one instruction.</li>
       <li><strong>The payoff: an accumulator.</strong> Move four jumpers so the adder's sum outputs feed register A's D inputs instead of the switches. Load B with <code>0001</code>. Each press of the button now performs A ← A + B and the A LEDs count <code>0000</code>, <code>0001</code>, <code>0010</code> and so on. Load B with <code>0011</code> and it counts in threes; switch SUB on and it counts down. That is one CPU instruction, <code>ADD A, B</code>, per button press, and "the result is written back to a register" stops being a metaphor. Debounce the button first, for instance with a 74HC14 Schmitt inverter and a 10 kΩ resistor with a 1 µF capacitor, or one press adds several times.</li>
     </ol>
     <h3>74HC283 pins</h3>
@@ -1088,6 +1108,82 @@ function renderFA(){
   document.getElementById('faTable').innerHTML=t+'</table>';
 }
 renderFA();
+
+/* ---------- gates drawn sideways: inputs on the left, output on the right ---------- */
+function gateR(parent,type,cx,cy){
+  const g=el('g',{transform:`translate(${cx},${cy}) rotate(-90) translate(-15,-12)`},parent);
+  drawGate(g,type,0,0);
+  if(type==='not') return {in1:[cx-12,cy], out:[cx+12,cy]};
+  const bub=(type==='nor'||type==='nand');
+  return {in1:[cx-12,cy+7], in2:[cx-12,cy-7], out:[cx+(bub?18:12),cy]};
+}
+
+/* ---------- one bit of memory: a D latch from five gates ---------- */
+const latch={d:1,e:1,q:0};
+function renderLatch(){
+  const host=document.getElementById('latch'); if(!host) return;
+  host.innerHTML='';
+  const svg=el('svg',{viewBox:'0 0 380 210',xmlns:NS,'aria-label':'A D latch: an inverter, two AND gates and two cross-coupled NOR gates'},host);
+  const {d,e}=latch, s=d&e, r=(d^1)&e;
+  if(s) latch.q=1; else if(r) latch.q=0;
+  const q=latch.q, nq=q^1, nd=d^1;
+  const dot=(x,y,on)=>el('circle',{cx:x,cy:y,r:3,class:'jdot'+(on?' on':'')},svg);
+  wire(svg,[[50,70],[70,70],[70,50],[88,50]],d);
+  wire(svg,[[70,70],[70,143],[138,143]],d); dot(70,70,d);
+  wire(svg,[[112,50],[120,50],[120,55],[138,55]],nd);
+  wire(svg,[[50,165],[60,165],[60,157],[138,157]],e);
+  wire(svg,[[100,157],[100,69],[138,69]],e); dot(100,157,e);
+  wire(svg,[[162,62],[238,62]],r);
+  wire(svg,[[162,150],[238,150]],s);
+  wire(svg,[[268,69],[306,69]],q);
+  wire(svg,[[268,143],[306,143]],nq);
+  wire(svg,[[285,69],[285,96],[215,96],[215,136],[238,136]],q); dot(285,69,q);
+  wire(svg,[[285,143],[285,116],[222,116],[222,76],[238,76]],nq); dot(285,143,nq);
+  gateR(svg,'not',100,50); gateR(svg,'and',150,62); gateR(svg,'and',150,150); gateR(svg,'nor',250,69); gateR(svg,'nor',250,143);
+  txt(svg,100,30,'NOT','lab'); txt(svg,150,38,'AND','lab'); txt(svg,150,174,'AND','lab'); txt(svg,250,45,'NOR','lab'); txt(svg,250,167,'NOR','lab');
+  txt(svg,200,53,'R = ¬D·E','lab'); txt(svg,200,160,'S = D·E','lab');
+  txt(svg,36,48,'D','lab'); txt(svg,36,143,'enable','lab'); txt(svg,320,47,'Q','lab'); txt(svg,320,166,'¬Q','lab');
+  bitCell(svg,36,70,d,'D',true,()=>{latch.d^=1;renderLatch();});
+  bitCell(svg,36,165,e,'enable',true,()=>{latch.e^=1;renderLatch();});
+  bitCell(svg,320,69,q,'Q',false); bitCell(svg,320,143,nq,'not Q',false);
+  document.getElementById('latchNote').innerHTML = e
+    ? `enable = 1: the latch is <strong>transparent</strong>. ${d?'S':'R'} = 1 ${d?'sets':'resets'} the NOR pair, so Q follows D: Q = <strong>${q}</strong>.`
+    : `enable = 0: both AND gates put out 0, so the NOR pair sees only its own feedback and <strong>holds</strong> Q = <strong>${q}</strong>. Change D all you like.`;
+}
+renderLatch();
+
+/* ---------- a 4-bit register: four flip-flops, one clock ---------- */
+const reg={d:[1,0,1,0],q:[0,0,0,0],load:1,pulse:0,note:'Press the clock to copy D into Q.'};
+function renderReg(){
+  const host=document.getElementById('reg'); if(!host) return;
+  host.innerHTML='';
+  const svg=el('svg',{viewBox:'0 0 360 186',xmlns:NS,'aria-label':'A 4-bit register: four D flip-flops sharing one clock and one load line'},host);
+  const xs=[86,154,222,290];
+  wire(svg,[[56,98],[318,98]],reg.pulse,'carry'); txt(svg,50,98,'clock','lab sm','end');
+  wire(svg,[[56,110],[318,110]],reg.load); txt(svg,324,110,'load','lab sm','start');
+  xs.forEach((x,i)=>{
+    const b=3-i, dv=reg.d[b], qv=reg.q[b];
+    txt(svg,x,8,'b'+b,'idx');
+    wire(svg,[[x,44],[x,74]],dv);
+    el('rect',{x:x-20,y:74,width:40,height:40,rx:4,class:'gate'},svg);
+    txt(svg,x,83,'D','idx'); txt(svg,x,95,'DFF','lab'); txt(svg,x,107,'Q','idx');
+    el('path',{d:`M${x-20},94 L${x-14},98 L${x-20},102`,class:'clk'},svg);
+    wire(svg,[[x,114],[x,144]],qv);
+    bitCell(svg,x,30,dv,`D bit ${b}`,true,()=>{reg.d[b]^=1;renderReg();});
+    bitCell(svg,x,158,qv,`Q bit ${b}`,false);
+  });
+  const val=a=>a.slice().reverse().join('');
+  document.getElementById('regNote').innerHTML=`D = ${val(reg.d)} &nbsp; Q = <strong>${val(reg.q)}</strong><br><span class="small-note">${reg.note}</span>`;
+  document.getElementById('regLoad').setAttribute('aria-pressed', reg.load?'true':'false');
+}
+document.getElementById('regClock').addEventListener('click',()=>{
+  if(reg.load){ reg.q=reg.d.slice(); reg.note='Rising edge with load = 1: every flip-flop copied its D into Q.'; }
+  else { reg.note='Rising edge with load = 0: the edge was ignored and Q kept its value.'; }
+  reg.pulse=1; renderReg();
+  setTimeout(()=>{reg.pulse=0;renderReg();},350);
+});
+document.getElementById('regLoad').addEventListener('click',()=>{ reg.load^=1; reg.note=reg.load?'load = 1: the next clock edge will copy D.':'load = 0: clock edges are ignored; Q holds.'; renderReg(); });
+renderReg();
 
 function update(){
   const r=compute();
