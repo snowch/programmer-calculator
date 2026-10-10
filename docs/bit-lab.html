@@ -275,6 +275,7 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
       <li>The truth tables of NOT, AND, OR and XOR.</li>
       <li>The idea that a CPU register holds a fixed number of bits (here 4 or 8).</li>
     </ul>
+    <p><strong>Notation.</strong> Gate equations on this page use the usual Boolean shorthand: <code>A ⊕ B</code> is XOR (1 exactly when the inputs differ), <code>A·B</code> or <code>AB</code> is AND, <code>A + B</code> is OR when it appears inside a gate equation, and <code>¬A</code> is NOT. So the full adder's carry-out, <code>A·B + cin·(A ⊕ B)</code>, reads "A and B, or cin and (A xor B)". Everywhere else on the page, + is ordinary addition.</p>
     <div class="check">
       <p>Self-check — if you can answer these without the lab, you're ready:</p>
       <ol>
@@ -346,7 +347,7 @@ table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weig
       <div>
         <p class="faeq" id="faEq"></p>
         <div id="faTable"></div>
-        <p class="tip">The highlighted row is the current input. The first XOR and AND form a <em>half adder</em>; the rest fold in the carry.</p>
+        <p class="tip">The highlighted row is the current input; ⊕ is XOR. The first XOR and AND form a <em>half adder</em>; the rest fold in the carry.</p>
       </div>
     </div>
     <p>Each adder's carry-out feeds the next column's carry-in, so the result ripples from bit 0 upward. The lab below shows that chain directly, drawing each full adder as a box marked FA; the box is exactly the five gates above.</p>
