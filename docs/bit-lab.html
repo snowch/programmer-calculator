@@ -275,7 +275,7 @@ table.add td.q{color:var(--na)}
     </div>
     <button class="small themebtn" id="themeBtn" type="button">theme: auto</button>
   </div>
-  <div class="meta"><span>Level: beginner digital design</span><span>Time: 60–90 min</span><span>Needs: nothing to install</span></div>
+  <div class="meta"><span>Level: beginner digital design</span><span>Time: 45–60 min</span><span>Needs: nothing to install</span></div>
   <nav class="toc" aria-label="Contents">
     <a href="#prereq">Prerequisites</a><a href="#goals">Learning goals</a><a href="#background">Background</a>
     <a href="#lab">The lab</a><a href="#exercises">Exercises</a><a href="#quiz">Check yourself</a><a href="#build">Build it</a><a href="#next">What's next</a>
@@ -289,6 +289,7 @@ table.add td.q{color:var(--na)}
       <li>The truth tables of NOT, AND, OR and XOR.</li>
       <li>The idea that a CPU register holds a fixed number of bits (here 4 or 8).</li>
     </ul>
+    <p>Two companion pages build the parts this lab uses from those gates, with inputs you can tap: <a href="gates-to-alu.html"><em>From gates to an ALU</em></a> (a full adder, then four of them chained) and <a href="gates-to-register.html"><em>From gates to a register</em></a> (a latch, a clock, a 4-bit register). Read them first if you want the ground under your feet; the background below only summarises them.</p>
     <p><strong>Notation.</strong> Gate equations on this page use the usual Boolean shorthand: <code>A ⊕ B</code> is XOR (1 exactly when the inputs differ), <code>A·B</code> or <code>AB</code> is AND, <code>A + B</code> is OR when it appears inside a gate equation, and <code>¬A</code> is NOT. So the full adder's carry-out, <code>A·B + cin·(A ⊕ B)</code>, reads "A and B, or cin and (A xor B)". Everywhere else on the page, + is ordinary addition.</p>
     <div class="check">
       <p>Self-check — if you can answer these without the lab, you're ready:</p>
@@ -312,7 +313,6 @@ table.add td.q{color:var(--na)}
       <li>State what each of the N, Z, C and V flags means and which gates produce it.</li>
       <li>Distinguish unsigned overflow (C) from signed overflow (V), and predict both for a given addition.</li>
       <li>Describe what the three kinds of shift do to the bits and to the carry flag.</li>
-      <li>Explain how two cross-coupled gates store a bit, and why a register copies its input only on a clock edge.</li>
     </ol>
   </section>
 
@@ -355,51 +355,9 @@ table.add td.q{color:var(--na)}
     <p>The lab below is a miniature ALU: two input registers, the gate network for one operation at a time, a result, and the four flags.</p>
     <p><strong>Two readings of the same bits.</strong> An 8-bit pattern has no intrinsic sign. Read as <em>unsigned</em>, <code>0xFF</code> is 255. Read as <em>two's complement signed</em>, the top bit counts as −128, so <code>0xFF</code> is −1 and the range is −128…127. The hardware adds the same way regardless; the flags let software decide whether the answer is trustworthy under the reading it cares about.</p>
     <p><strong>Negation.</strong> To negate a two's complement number, invert every bit and add 1. This is why an ALU never needs a subtractor: A − B is just A + (NOT B) + 1.</p>
-    <p><strong>From gates to an ALU.</strong> Bitwise ops use one gate per bit position. Addition uses one <em>full adder</em> per bit position, and a full adder is only five gates: sum = A ⊕ B ⊕ cin and carry-out = A·B + cin·(A ⊕ B). Tap the inputs to watch them work.</p>
-    <div class="fawrap">
-      <div class="fa" id="fa"></div>
-      <div>
-        <p class="faeq" id="faEq"></p>
-        <div id="faTable"></div>
-        <p class="tip">The highlighted row is the current input; ⊕ is XOR. The first XOR and AND form a <em>half adder</em>; the rest fold in the carry.</p>
-      </div>
-    </div>
-    <p><strong>Four of them add 4-bit numbers.</strong> One full adder adds a single pair of bits. To add two 4-bit numbers you use four of them, one per bit, and they work the way you add on paper: write the two numbers one above the other, add each pair of digits starting from the right, and carry a 1 into the next place whenever a pair adds up to 2 or more. Each place, called a <em>column</em>, gets its own full adder. Its A and B inputs are that column's two bits, its carry-in is whatever the column on its right carried out, and its carry-out feeds the column on its left. That carry wire is the only connection between the adders. The carry-in of the rightmost column is tied to 0, and the carry-out of the leftmost column becomes the C flag. Below, the four adders are drawn as boxes marked <b>FA</b> (short for full adder), with the same sum written out as long addition beside them. Tap one of the FA boxes to open it and see its five gates working on that column; press <b>ripple</b> to watch the carries settle one column at a time, which is why the top bit is always the last to be ready.</p>
-    <div class="fawrap chainwrap">
-      <div>
-        <div class="fa" id="chain"></div>
-        <div class="row" style="margin:8px 0 0"><button class="small" id="chainRipple" type="button">ripple</button><span class="tip" style="margin:0">tap A or B bits to change the sum, tap an FA box to open it</span></div>
-        <div id="chainTable" style="margin-top:12px"></div>
-        <p class="tip">The same sum written as long addition. The red row is the carry into each column. The carry out of bit 3 lands in the C column on the left, as the fifth digit of the answer would on paper; in the machine it becomes the C flag.</p>
-      </div>
-      <div>
-        <div class="fa" id="chainFA"></div>
-        <p class="tip" id="chainNote"></p>
-      </div>
-    </div>
-    <p>The lab below shows the same chain at 8 bits, drawing each full adder as a box marked FA; every box is the five gates above.</p>
-    <p><strong>From gates to a register.</strong> The ALU needs no memory. A gate is <em>combinational</em>: its output depends only on what its inputs are right now, so change an input and the output follows. The adders and the whole ALU inherit that.</p>
-    <p><strong>Where memory is needed.</strong> The registers on either side of the ALU must hold their bits steady while the gates work on them, and keep them until a new value is written. There is no special memory part inside them. A register is made of the same kinds of gates as the ALU, here NOT, AND and NOR, wired in a different way: an output is led back round to become an input, so the circuit can hold itself in a state. That loop is called <em>feedback</em>.</p>
-    <p><strong>The smallest memory: two NOR gates.</strong> Wire two NOR gates so that each one's output is an input of the other, and the pair has two stable states that it holds for as long as the power is on.</p>
-    <p><strong>Adding a data input and an enable.</strong> An inverter and two AND gates in front turn the pair into a <em>D latch</em>: while enable is 1, Q copies D; the moment enable drops to 0, the latch keeps whatever it last saw. Try it: with enable on, set D; turn enable off; now change D and watch Q stay put.</p>
-    <div class="fawrap">
-      <div class="fa" id="latch"></div>
-      <div>
-        <p class="faeq" id="latchNote"></p>
-        <table class="truth"><tr><th>enable</th><th>D</th><th>Q</th></tr><tr><td>0</td><td>×</td><td>holds</td></tr><tr><td>1</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1</td><td>1</td></tr></table>
-        <p class="tip">S = D·enable sets the pair and R = ¬D·enable resets it. With enable at 0 neither can fire, and the two NOR gates simply keep holding each other's output in place.</p>
-      </div>
-    </div>
-    <p>A register is a row of these cells, one per bit, sharing one enable line. In a CPU that enable comes from the <em>clock</em>: a signal that swings between 0 and 1 billions of times a second and paces everything. The instant it rises, called the <em>clock edge</em>, is the one moment when registers may take in a new value; between edges they hold still while the gates settle. Real CPUs use a sharper cell than the latch for this, the edge-triggered <em>D flip-flop</em>: two latches back to back, arranged so that Q changes only at the rising edge and never "sees through" while the clock is high. Four flip-flops with a shared clock and a load line make a 4-bit register, and the 74HC173 in the build section is exactly that. Set the D bits, then press the clock:</p>
-    <div class="fawrap">
-      <div class="fa" id="reg"></div>
-      <div>
-        <div class="row" style="margin:0 0 10px"><button class="small" id="regClock" type="button">clock ▲</button><button class="small" id="regLoad" type="button" aria-pressed="true">load</button></div>
-        <p class="faeq" id="regNote"></p>
-        <p class="tip">Between clock edges the D inputs can change freely; nothing reaches Q until the next edge. With load off, the edge is ignored. That is how a CPU writes one register and leaves all the others alone: every register sees the same clock, but only the chosen one has its load line raised.</p>
-      </div>
-    </div>
-    <p><strong>The flags.</strong> After an operation the ALU records four one-bit facts, which conditional branches then test. They are four separate stored bits, not one four-way value: each flag has its own flip-flop, loaded at the same clock edge as the result, and any combination can be set at once. <code>0x80 + 0x80</code> sets C and V together, and <code>0xFF + 1</code> sets Z and C. Real CPUs keep these four bits inside a wider <em>status register</em> next to things like interrupt and mode bits; on ARM it is 32 bits wide with N, Z, C and V as its top four.</p>
+    <p><strong>From gates to an ALU.</strong> Bitwise ops use one gate per bit position. Addition uses one <em>full adder</em> per bit position, and a full adder is only five gates: sum = A ⊕ B ⊕ cin and carry-out = A·B + cin·(A ⊕ B). Four of them, each carry-out wired to the next carry-in, add two 4-bit numbers the way you add on paper, and the carry ripples from bit 0 upward. The lab draws each full adder as a box marked <b>FA</b> (short for full adder). To see inside the box, with inputs you can tap and a ripple you can watch, read the companion page <a href="gates-to-alu.html"><em>From gates to an ALU</em></a>.</p>
+    <p><strong>From gates to a register.</strong> The ALU needs no memory: a gate's output depends only on its present inputs. The registers on either side of it do, and they are made of the same kinds of gates wired with <em>feedback</em>, an output led back round to an input, so a pair of NOR gates can hold a bit for as long as the power is on. A <em>clock</em>, a signal that swings between 0 and 1 billions of times a second, decides the one instant at which registers take in a new value. The companion page <a href="gates-to-register.html"><em>From gates to a register</em></a> builds a latch from five gates and a 4-bit register you can clock.</p>
+    <p><strong>The flags.</strong> After an operation the ALU records four one-bit facts, which conditional branches then test. They are four separate stored bits, not one four-way value: each flag has its own flip-flop (the memory cell built on the <a href="gates-to-register.html">From gates to a register</a> page), loaded at the same clock edge as the result, and any combination can be set at once. <code>0x80 + 0x80</code> sets C and V together, and <code>0xFF + 1</code> sets Z and C. Real CPUs keep these four bits inside a wider <em>status register</em> next to things like interrupt and mode bits; on ARM it is 32 bits wide with N, Z, C and V as its top four.</p>
     <table>
       <tr><th>Flag</th><th>Meaning</th><th>Built from</th></tr>
       <tr><td>N</td><td>result is negative when read as signed</td><td>result's top bit, straight through</td></tr>
@@ -624,10 +582,10 @@ table.add td.q{color:var(--na)}
       <figcaption>The 4-bit bench build. Thick amber lines are 4-wire buses, dashed grey lines are control signals, red is the carry, and the dashed blue path is the step-5 feedback. The badges show which step adds each part; dashed boxes are the register parts.</figcaption>
     </figure>
     <ol class="steps">
-      <li><strong>One full adder from five gates.</strong> Wire the circuit from the Background section with three chips: a 74HC86 (four XOR gates), a 74HC08 (four AND gates) and a 74HC32 (four OR gates). Three switches give A, B and carry-in, each with a 10 kΩ resistor to ground so an open switch reads 0; two LEDs show sum and carry-out. Flick through all eight rows of the truth table. You have built the box the lab draws as FA.</li>
+      <li><strong>One full adder from five gates.</strong> Wire the full adder from the <a href="gates-to-alu.html">From gates to an ALU</a> page with three chips: a 74HC86 (four XOR gates), a 74HC08 (four AND gates) and a 74HC32 (four OR gates). Three switches give A, B and carry-in, each with a 10 kΩ resistor to ground so an open switch reads 0; two LEDs show sum and carry-out. Flick through all eight rows of the truth table. You have built the box the lab draws as FA.</li>
       <li><strong>Four of them make the adder.</strong> Chain four full adders, each carry-out into the next carry-in and the first carry-in to ground, and you have the ripple-carry adder the lab draws: that is two 74HC86, two 74HC08 and one 74HC32. Or buy the same four adders in one chip, the 74HC283. Either way, two 4-way DIP switches feed A and B, and five LEDs show the sums and the carry-out. Set A to <code>0111</code> and B to <code>0001</code>: the sum LEDs show <code>1000</code> the instant the switch closes. There is no clock and no "run"; the outputs just follow the inputs, which is all "ALU" means. Set A to <code>1111</code> and B to <code>0001</code> and the sums go dark while the carry-out LED lights. That LED is the C flag, and on the 74HC283 it is literally pin 9. The LED on S3 is N. The DIP switches are registers you load by hand.</li>
       <li><strong>Subtraction and the other flags.</strong> Insert a 74HC86 between the B switches and the adder, with a SUB switch on the second input of every gate and on the adder's carry-in. SUB off passes B through; SUB on inverts B and the carry-in adds the 1, so the adder computes A + NOT B + 1, which is A − B. For Z, feed the four sum lines into one gate of a 74HC4002 (a 4-input NOR) and light an LED from its output. For V, overflow means the two numbers entering the adder had the same top bit and the sum's top bit differs: with spare XOR gates and one AND gate from a 74HC08, compute XNOR(A3, B′3) AND XOR(A3, S3), where B′3 is the bit-3 XOR output, the operand the adder actually sees.</li>
-      <li><strong>Registers: the numbers stay put.</strong> Put a 74HC173, a 4-bit D register, between each DIP switch and the adder: switches into its D inputs, its Q outputs into the adder and four LEDs, and one push button on the clock pin of both chips. Set the switches to <code>0111</code> and press the button: the register LEDs show <code>0111</code>. Now flip the switches to anything else; the register LEDs do not move. The chip is remembering, and that is the whole of what a register is. Its load-enable pins decide whether a press changes it. To see the memory in pure gates first, wire the D latch from the Background section with a 74HC02 (four NOR gates), a 74HC08 and a 74HC04 inverter; the 74HC173 is four sharper versions of that cell. The adder now works on "registers A and B", the block diagram at the top of this page, and in this build you are the control unit: the SUB switch is an operation line, and each press of the clock executes one instruction.</li>
+      <li><strong>Registers: the numbers stay put.</strong> Put a 74HC173, a 4-bit D register, between each DIP switch and the adder: switches into its D inputs, its Q outputs into the adder and four LEDs, and one push button on the clock pin of both chips. Set the switches to <code>0111</code> and press the button: the register LEDs show <code>0111</code>. Now flip the switches to anything else; the register LEDs do not move. The chip is remembering, and that is the whole of what a register is. Its load-enable pins decide whether a press changes it. To see the memory in pure gates first, wire the D latch from the <a href="gates-to-register.html">From gates to a register</a> page with a 74HC02 (four NOR gates), a 74HC08 and a 74HC04 inverter; the 74HC173 is four sharper versions of that cell. The adder now works on "registers A and B", the block diagram at the top of this page, and in this build you are the control unit: the SUB switch is an operation line, and each press of the clock executes one instruction.</li>
       <li><strong>The payoff: an accumulator.</strong> Move four jumpers so the adder's sum outputs feed register A's D inputs instead of the switches. Load B with <code>0001</code>. Each press of the button now performs A ← A + B and the A LEDs count <code>0000</code>, <code>0001</code>, <code>0010</code> and so on. Load B with <code>0011</code> and it counts in threes; switch SUB on and it counts down. That is one CPU instruction, <code>ADD A, B</code>, per button press, and "the result is written back to a register" stops being a metaphor. Debounce the button first, for instance with a 74HC14 Schmitt inverter and a 10 kΩ resistor with a 1 µF capacitor, or one press adds several times.</li>
     </ol>
     <h3>74HC283 pins</h3>

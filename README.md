@@ -14,8 +14,12 @@ calculator's exercise groups follow.
 
 **Bit Lab (gates, bits and flags):** https://snowch.github.io/programmer-calculator/docs/bit-lab.html
 — an interactive gate-level view of a miniature ALU: tap bits, pick an operation, and watch the wires,
-the carries and the N Z C V flags. Includes a full adder built from five gates, a table of example
-instructions, guided exercises, and a breadboard build guide with a schematic.
+the carries and the N Z C V flags, with a table of example instructions, guided exercises, and a
+breadboard build guide with a schematic. Two companion pages are its prerequisites:
+[From gates to an ALU](https://snowch.github.io/programmer-calculator/docs/gates-to-alu.html) (a full
+adder from five gates, four of them chained, the ripple) and
+[From gates to a register](https://snowch.github.io/programmer-calculator/docs/gates-to-register.html)
+(a latch from NOR gates, the clock, a 4-bit register).
 
 ## Files
 
@@ -31,6 +35,7 @@ works from any sub-path):
 | `screenshots/` | Images shown in the install dialog (Android / desktop) |
 | `docs/twos-complement.html`, `docs/twos-complement.pdf` | The two's complement tutorial: print-ready HTML source and the PDF rendered from it |
 | `docs/bit-lab.html` | Bit Lab: an interactive gate-level lab on bitwise operations, binary arithmetic and the N Z C V flags |
+| `docs/gates-to-alu.html`, `docs/gates-to-register.html` | The Bit Lab's companion pages: a full adder and a 4-bit ripple adder from gates; a latch, a clock and a register from gates |
 | `.github/workflows/pages.yml` | Deploys the site to GitHub Pages on every push to `main` |
 | `.nojekyll` | Tells GitHub Pages to publish the files as-is |
 
