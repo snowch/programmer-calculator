@@ -455,7 +455,7 @@ ol.trace li{margin:0 0 4px}
     <p class="tip">ARM mnemonics. x86 has the same pairs under other names: <code>jb</code>/<code>jae</code>/<code>ja</code>/<code>jbe</code> for unsigned and <code>jl</code>/<code>jge</code>/<code>jg</code>/<code>jle</code> for signed, except that x86 sets its carry flag to 1 when a borrow was needed, the opposite of ARM.</p>
     <h3>The same thing as a program</h3>
     <p>Here is the same comparison as code: one <code>if</code> in C, and the ARM assembly a compiler turns it into. Pick which type <code>a</code> and <code>b</code> are declared as. The only C line that changes is the declaration, yet the compiler emits a different load and a different branch, because the type tells it which member of each pair to use. The lines that actually run for the lab's current A and B are highlighted, and the trace underneath walks through them.</p>
-    <div class="row"><span>Declared as</span><button class="small" type="button" id="asmTypeU" aria-pressed="true">uint8_t (unsigned)</button><button class="small" type="button" id="asmTypeS" aria-pressed="false">int8_t (signed)</button></div>
+    <div class="row"><span>Declared as</span><button class="small asmType" type="button" id="asmTypeU" data-s="0" aria-pressed="true">uint8_t (unsigned)</button><button class="small asmType" type="button" id="asmTypeS" data-s="1" aria-pressed="false">int8_t (signed)</button></div>
     <div class="asmwrap">
       <div><h3>C</h3><pre class="work asmprog" id="asmC"></pre></div>
       <div><h3>ARM assembly</h3><pre class="work asmprog" id="asmArm"></pre></div>
@@ -463,6 +463,7 @@ ol.trace li{margin:0 0 4px}
     <ol class="trace" id="asmTrace"></ol>
     <h3>Under the hood</h3>
     <p>The same two instructions, bit by bit. First the load, which has to turn a byte into a 32-bit register, then the compare, which is the lab's subtraction with 32 columns instead of eight. Switch the declaration above and watch which cells change.</p>
+    <div class="row"><span>Declared as</span><button class="small asmType" type="button" data-s="0" aria-pressed="true">uint8_t (unsigned)</button><button class="small asmType" type="button" data-s="1" aria-pressed="false">int8_t (signed)</button></div>
     <div class="hood" id="hood"></div>
     <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. (A load is widening whenever the register is wider than the value in memory, which is every byte load on a 32-bit machine: the spare bits have to be filled with something, and the two loads fill them differently, as the program above shows.) A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
     <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Load <code>0x80 vs 0x7F</code> above and watch the two readings order the same bits oppositely.</p>
@@ -1265,14 +1266,9 @@ function renderAsmProg(f,a,b,w){
     `<li><code>MOV R0, #${taken?1:0}</code> sets r = ${taken?1:0}. In C, ${va} &lt; ${vb} is ${less}, so the program ${ok?'agrees ✓':'disagrees ✗'}.</li>`,
   ].join('');
   renderHood(S,a,b,w,a32,b32);
-  const bu=document.getElementById('asmTypeU'), bs=document.getElementById('asmTypeS');
-  if(bu){ bu.setAttribute('aria-pressed', S?'false':'true'); bs.setAttribute('aria-pressed', S?'true':'false'); }
+  document.querySelectorAll('button.asmType').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.s==='1')===S?'true':'false'));
 }
-(function(){
-  const bu=document.getElementById('asmTypeU'), bs=document.getElementById('asmTypeS'); if(!bu||!bs) return;
-  bu.addEventListener('click',()=>{ asmSigned=false; update(); });
-  bs.addEventListener('click',()=>{ asmSigned=true; update(); });
-})();
+document.querySelectorAll('button.asmType').forEach(b=>b.addEventListener('click',()=>{ asmSigned=b.dataset.s==='1'; update(); }));
 /* ---------- under the hood: the load and the compare, bit by bit ---------- */
 function renderHood(S,a,b,w,a32,b32){
   const host=document.getElementById('hood'); if(!host) return;
