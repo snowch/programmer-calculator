@@ -420,7 +420,7 @@ ol.trace li{margin:0 0 4px}
   <section class="why" id="why"></section>
   <section class="tut" id="readings">
     <h2>Signed or unsigned: who decides?</h2>
-    <p>Not the register and not the adder: neither has anywhere to store the choice. The ALU produces one result and all four flags on every operation, which is enough to serve both readings at once, and the decision is made afterwards, one instruction at a time, by which flags the next instruction tests. Instruction sets therefore come in pairs: a compare instruction is a subtraction that throws its result away and keeps the flags, and after it there is an unsigned branch and a signed branch for every question. Below, the lab's current A and B are fed through <code>CMP A, B</code>, and every ARM conditional branch says whether it would be taken and whether the arithmetic agrees under its reading. Change A or B in the lab above, or load a pair here.</p>
+    <p>Not the register and not the adder: neither has anywhere to store the choice. The ALU produces one result and all four flags on every operation, which is enough to serve both readings at once, and the decision is made afterwards, one instruction at a time, by which flags the next instruction tests. Instruction sets therefore come in pairs: a compare instruction is a subtraction that throws its result away and keeps the flags, and after it there is an unsigned branch and a signed branch for every question. Below, the lab's current A and B are fed through <code>CMP A, B</code>, and every ARM conditional branch says whether it would be taken and whether the arithmetic agrees under its reading. Change A or B in the lab above, or load a pair here. The snippet ends with <code>BEQ</code>, the one branch both readings share; the tables list the rest.</p>
     <div class="row" id="asmPresets"></div>
     <pre class="work" id="asmCode"></pre>
     <div class="asmwrap">
@@ -1154,7 +1154,9 @@ function renderAsm(r){
 `    CMP  A, B        ; flags <- A - B, result discarded
     ; A = ${hex(a,w)} = ${ua} unsigned, ${sa} signed
     ; B = ${hex(b,w)} = ${ub} unsigned, ${sb} signed
-    ; A - B = ${hex(f.res,w)}   N=${yn(f.n)} Z=${yn(f.z)} C=${yn(f.c)} V=${yn(f.v)}`;
+    ; A - B = ${hex(f.res,w)}   N=${yn(f.n)} Z=${yn(f.z)} C=${yn(f.c)} V=${yn(f.v)}
+    BEQ  same        ; jump to "same" if Z = 1. Z = ${yn(f.z)}: ${f.z?"taken":"not taken"}
+    ...              ; ${f.z?"skipped: execution continues at the label":"runs next, because the branch fell through"}`;
   const rows=(list,host)=>{
     let h='<table class="truth asm"><tr><th>branch</th><th>means</th><th>tests</th><th>taken?</th><th>arithmetic</th></tr>';
     for(const [mn,meaning,test,taken,truth] of list){
