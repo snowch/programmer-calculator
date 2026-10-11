@@ -447,7 +447,7 @@ ol.trace li{margin:0 0 4px}
     <p>It does not need to. The ALU produces one result and all four flags on every operation. C and Z answer the unsigned questions and N and V the signed ones, so both readings are available at the same time.</p>
     <p>The decision is made afterwards, by the next instruction. A compare instruction, <code>CMP</code>, is a subtraction that keeps the flags and throws the result away. After it comes a branch instruction, which tests some of the flags and jumps if the test passes. The instruction set has two branches for every question: one tests the unsigned flags and one tests the signed flags. Whoever writes the program, or the compiler working for them, picks which one to use. That is who decides.</p>
     <p>Try it below. The lab's current A and B are fed through <code>CMP A, B</code>, and the snippet ends with <code>BEQ</code>, the one branch both readings share. The tables underneath list the other branches: what each one means, which flags it tests, whether it would be taken right now, and whether that matches the arithmetic under its reading. Change A or B in the lab above, or load a pair here.</p>
-    <div class="row" id="asmPresets"></div>
+    <div class="row asmPresets" id="asmPresets"></div>
     <pre class="work" id="asmCode"></pre>
     <div class="row"><button class="small" type="button" id="asmWorkBtn" aria-pressed="false">show the working</button><span>how A − B was computed, bit by bit (explained on <a href="adding-to-subtracting.html">From adding to subtracting</a>)</span></div>
     <div class="hood" id="asmWork" hidden></div>
@@ -458,6 +458,7 @@ ol.trace li{margin:0 0 4px}
     <p class="tip">ARM mnemonics. x86 has the same pairs under other names: <code>jb</code>/<code>jae</code>/<code>ja</code>/<code>jbe</code> for unsigned and <code>jl</code>/<code>jge</code>/<code>jg</code>/<code>jle</code> for signed, except that x86 sets its carry flag to 1 when a borrow was needed, the opposite of ARM.</p>
     <h3>The same thing as a program</h3>
     <p>Here is the same comparison as code: one <code>if</code> in C, and the ARM assembly a compiler turns it into. Pick which type <code>a</code> and <code>b</code> are declared as. The only C line that changes is the declaration, yet the compiler emits a different load and a different branch, because the type tells it which member of each pair to use. The lines that actually run for the lab's current A and B are highlighted, and the trace underneath walks through them.</p>
+    <div class="row asmPresets"></div>
     <div class="row"><span>Declared as</span><button class="small asmType" type="button" id="asmTypeU" data-s="0" aria-pressed="true">uint8_t (unsigned)</button><button class="small asmType" type="button" id="asmTypeS" data-s="1" aria-pressed="false">int8_t (signed)</button></div>
     <div class="asmwrap">
       <div><h3>C</h3><pre class="work asmprog" id="asmC"></pre></div>
@@ -466,6 +467,7 @@ ol.trace li{margin:0 0 4px}
     <ol class="trace" id="asmTrace"></ol>
     <h3>Under the hood</h3>
     <p>The same two instructions, bit by bit. First the load, which has to turn a byte into a 32-bit register, then the compare, which is the lab's subtraction with 32 columns instead of the lab's four or eight. Switch the declaration above and watch which cells change; if nothing changes, the panel says why.</p>
+    <div class="row asmPresets"></div>
     <div class="row"><span>Declared as</span><button class="small asmType" type="button" data-s="0" aria-pressed="true">uint8_t (unsigned)</button><button class="small asmType" type="button" data-s="1" aria-pressed="false">int8_t (signed)</button></div>
     <div class="hood" id="hood"></div>
     <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. (A load is widening whenever the register is wider than the value in memory, which is every byte load on a 32-bit machine: the spare bits have to be filled with something, and the two loads fill them differently, as the program above shows.) A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
@@ -1173,13 +1175,14 @@ const ASM_PRESETS=[
   ['5 vs 3', 5, 3], ['3 vs 5', 3, 5], ['0x80 vs 0x7F', 0x80, 0x7F], ['0xFF vs 0x01', 0xFF, 0x01], ['0x7F vs 0x7F', 0x7F, 0x7F],
 ];
 (function(){
-  const host=document.getElementById('asmPresets'); if(!host) return;
+  document.querySelectorAll('.asmPresets').forEach(host=>{
   const cap=document.createElement('span'); cap.textContent='Load a pair'; host.appendChild(cap);
   for(const [t,a,b] of ASM_PRESETS){
     const btn=document.createElement('button'); btn.className='small'; btn.type='button'; btn.textContent=t;
     btn.addEventListener('click',()=>{ state.op='SUB'; state.w=8; state.a=a; state.b=b; update(); });
     host.appendChild(btn);
   }
+  });
 })();
 function renderAsm(r){
   const code=document.getElementById('asmCode'); if(!code) return;
