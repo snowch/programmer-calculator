@@ -358,14 +358,6 @@ table.add td.q{color:var(--na)}
     <p><code>CMP</code> followed by <code>BEQ</code> is how <code>if (a == b)</code> runs: the subtraction leaves Z set exactly when the two values were equal, and the branch reads it. In the lab below there is no control unit; you are it. The operation buttons are its output wires.</p>
     <p>The lab below is a miniature ALU: two input registers, the gate network for one operation at a time, a result, and the four flags.</p>
     <p><strong>Two readings of the same bits.</strong> An 8-bit pattern has no intrinsic sign. Read as <em>unsigned</em>, <code>0xFF</code> is 255. Read as <em>two's complement signed</em>, the top bit counts as −128, so <code>0xFF</code> is −1 and the range is −128…127. The hardware adds the same way regardless; the flags let software decide whether the answer is trustworthy under the reading it cares about.</p>
-    <p><strong>Who decides which reading?</strong> Not the register and not the adder: neither has anywhere to store the choice. The ALU produces one result and all four flags on every operation, which is enough to serve both readings at once, and the decision is made afterwards, one instruction at a time, by which flags the next instruction tests. Instruction sets therefore come in pairs. After <code>CMP a, b</code>, which computes a − b and keeps only the flags, ARM offers:</p>
-    <table>
-      <tr><th>Question</th><th>Unsigned branch</th><th>Signed branch</th></tr>
-      <tr><td>a &lt; b?</td><td><code>BLO</code>: C = 0 (a borrow was needed)</td><td><code>BLT</code>: N ≠ V</td></tr>
-      <tr><td>a ≥ b?</td><td><code>BHS</code>: C = 1</td><td><code>BGE</code>: N = V</td></tr>
-      <tr><td>a = b?</td><td><code>BEQ</code>: Z = 1</td><td><code>BEQ</code>: Z = 1</td></tr>
-    </table>
-    <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation. That is why this lab always shows both readings in its values table, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other.</p>
     <p><strong>Negation.</strong> To negate a two's complement number, invert every bit and add 1. This is why an ALU never needs a subtractor: A − B is just A + (NOT B) + 1.</p>
     <p><strong>From gates to an ALU.</strong> Bitwise ops use one gate per bit position. Addition uses one <em>full adder</em> per bit position, and a full adder is only five gates: sum = A ⊕ B ⊕ cin and carry-out = A·B + cin·(A ⊕ B). Four of them, each carry-out wired to the next carry-in, add two 4-bit numbers the way you add on paper, and the carry ripples from bit 0 upward. The lab draws each full adder as a box marked <b>FA</b> (short for full adder). To see inside the box, with inputs you can tap and a ripple you can watch, read the companion page <a href="gates-to-alu.html"><em>From gates to an ALU</em></a>.</p>
     <p><strong>From gates to a register.</strong> The ALU needs no memory: a gate's output depends only on its present inputs. The registers on either side of it do, and they are made of the same kinds of gates wired with <em>feedback</em>, an output led back round to an input, so a pair of NOR gates can hold a bit for as long as the power is on. A <em>clock</em>, a signal that swings between 0 and 1 billions of times a second, decides the one instant at which registers take in a new value. The companion page <a href="gates-to-register.html"><em>From gates to a register</em></a> builds a latch from five gates and a 4-bit register you can clock.</p>
@@ -400,12 +392,24 @@ table.add td.q{color:var(--na)}
   <div class="circuit"><svg id="circuit" xmlns="http://www.w3.org/2000/svg" aria-label="Gate-level circuit"></svg></div>
   <p class="tip">Tap a bit in A or B to flip it. Amber wires carry a 1; red carries are the ripple between adders.</p>
 
-  <p class="tip">Both readings are always shown below. The hardware does not know which one you mean; only the next instruction does.</p>
+  <p class="tip">Both readings are always shown below. The hardware is just bits and does not know which one you mean; what "as unsigned" and "as signed" in the flag cards rest on is explained after them.</p>
   <div class="values" id="values"></div>
 
   <div class="flags" id="flags"></div>
 
   <section class="why" id="why"></section>
+  <section class="tut" id="readings">
+    <h2>Signed or unsigned: who decides?</h2>
+    <p>Not the register and not the adder: neither has anywhere to store the choice. The ALU produces one result and all four flags on every operation, which is enough to serve both readings at once, and the decision is made afterwards, one instruction at a time, by which flags the next instruction tests. Instruction sets therefore come in pairs. After <code>CMP a, b</code>, which computes a − b and keeps only the flags, ARM offers:</p>
+    <table>
+      <tr><th>Question</th><th>Unsigned branch</th><th>Signed branch</th></tr>
+      <tr><td>a &lt; b?</td><td><code>BLO</code>: C = 0 (a borrow was needed)</td><td><code>BLT</code>: N ≠ V</td></tr>
+      <tr><td>a ≥ b?</td><td><code>BHS</code>: C = 1</td><td><code>BGE</code>: N = V</td></tr>
+      <tr><td>a = b?</td><td><code>BEQ</code>: Z = 1</td><td><code>BEQ</code>: Z = 1</td></tr>
+    </table>
+    <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
+    <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Try <code>0x7F + 1</code> and <code>0xFF + 1</code> from the presets below and watch the two cards disagree.</p>
+  </section>
 
   <section class="presets">
     <h2>Try these</h2>
