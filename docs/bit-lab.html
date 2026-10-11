@@ -436,7 +436,7 @@ ol.trace li{margin:0 0 4px}
       <div><h3>ARM assembly</h3><pre class="work asmprog" id="asmArm"></pre></div>
     </div>
     <ol class="trace" id="asmTrace"></ol>
-    <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
+    <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. (A load is widening whenever the register is wider than the value in memory, which is every byte load on a 32-bit machine: the spare bits have to be filled with something, and the two loads fill them differently, as the program above shows.) A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
     <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Load <code>0x80 vs 0x7F</code> above and watch the two readings order the same bits oppositely.</p>
   </section>
 
@@ -1191,9 +1191,9 @@ function renderAsmProg(f,a,b,w){
   if(!cH||!aH||!tH) return;
   const S=asmSigned, va=S?signed(a,w):a, vb=S?signed(b,w):b, less=va<vb;
   const N=f.n,Z=f.z,C=f.c,V=f.v, yn=x=>x?'1':'0';
-  const taken=S?(N!==V):(C===0);
+  let taken;
   const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const ln=(run,code,cm)=>`<span class="ln${run?' run':''}">${esc(code.padEnd(22))}${cm?'<span class="cm">'+esc(cm)+'</span>':''}</span>`;
+  const ln=(run,code,cm)=>`<span class="ln${run?' run':''}">${esc(code.padEnd(21))}${cm?'<span class="cm">'+esc(cm)+'</span>':''}</span>`;
   const ty=S?'int8_t ':'uint8_t';
   const note=w!==8?[ln(false,'',`// lab is ${w} bits wide; C's smallest types are 8, so read these as ${w}-bit`)]:[];
   cH.innerHTML=[...note,
@@ -1206,12 +1206,19 @@ function renderAsmProg(f,a,b,w){
     ln(!less,`    r = 0;`, !less?`// r = 0`:''),
   ].join('');
   const ldr=S?'LDRSB':'LDRB ', br=S?'BLT  ':'BLO  ';
-  const test=S?`N ≠ V`:`C = 0`;
-  const now=S?`${yn(N)} ${N!==V?'≠':'='} ${yn(V)}`:`C=${yn(C)}`;
+  const ext=x=>S?((bit(x,w-1)?(x|((~0)<<w)):x)>>>0):x, a32=ext(a), b32=ext(b), r32=(a32-b32)>>>0;
+  const ext8=x=>((bit(x,w-1)?(x|((~0)<<w)):x)>>>0);
+  const h32=x=>'0x'+x.toString(16).toUpperCase().padStart(8,'0');
+  const N32=r32>>>31, Z32=r32===0?1:0, C32=a32>=b32?1:0, V32=((a32^b32)&(a32^r32))>>>31;
+  const taken32=S?(N32!==V32):(C32===0);
+  const same=N32===N&&Z32===Z&&C32===C&&V32===V;
+  const sv=x=>x>>>31?x-4294967296:x;
+  const test=S?`N ≠ V`:`C = 0`; taken=taken32;
+  const now=S?`${yn(N32)} ${N32!==V32?'≠':'='} ${yn(V32)}`:`C=${yn(C32)}`;
   aH.innerHTML=[
-    ln(true, `      ${ldr} R1, [a]`, `; R1 = ${hex(a,w)}, ${S?'sign':'zero'}-extended`),
-    ln(true, `      ${ldr} R2, [b]`, `; R2 = ${hex(b,w)}`),
-    ln(true, `      CMP   R1, R2`, `; ${hex(a,w)} - ${hex(b,w)}: N=${yn(N)} Z=${yn(Z)} C=${yn(C)} V=${yn(V)}`),
+    ln(true, `      ${ldr} R1, [a]`, `; R1 = ${h32(a32)}, ${S?'sign':'zero'}-extended`),
+    ln(true, `      ${ldr} R2, [b]`, `; R2 = ${h32(b32)}`),
+    ln(true, `      CMP   R1, R2`, `; 32-bit: N=${yn(N32)} Z=${yn(Z32)} C=${yn(C32)} V=${yn(V32)}`),
     ln(true, `      ${br} less`, `; taken if ${test} (${now}: ${taken?'yes':'no'})`),
     ln(!taken,`      MOV   R0, #0`, !taken?`; r = 0`:''),
     ln(!taken,`      B     done`),
@@ -1220,9 +1227,13 @@ function renderAsmProg(f,a,b,w){
   ].join('');
   const ok=taken===less;
   tH.innerHTML=[
-    `<li><code>${S?'LDRSB':'LDRB'}</code> loads the bytes ${S?'with sign extension, because <code>int8_t</code> is signed':'with zero extension, because <code>uint8_t</code> is unsigned'}: the declaration has already chosen the load.</li>`,
-    `<li><code>CMP R1, R2</code> computes ${hex(a,w)} − ${hex(b,w)} = ${hex(f.res,w)} and stores N=${yn(N)} Z=${yn(Z)} C=${yn(C)} V=${yn(V)}. The result itself is thrown away.</li>`,
-    `<li><code>${br.trim()} less</code> tests ${test}. ${S?`N is ${yn(N)} and V is ${yn(V)}`:`C is ${yn(C)}`}, so the branch is <strong>${taken?'taken: execution jumps to <code>less</code>':'not taken: execution falls through to the next line'}</strong>.</li>`,
+    `<li><code>${ldr.trim()}</code> copies the ${w}-bit value ${hex(a,w)} into R1, a 32-bit register. Only the bottom ${w} bits come from memory, so the load has to fill in the other ${32-w}, and that is why there are two load instructions. `+
+      (S?`<code>LDRSB</code> copies the top bit into them (sign extension), giving ${h32(a32)}, which is ${sv(a32)} in 32 bits. <code>LDRB</code> would have filled them with zeros, giving ${h32(a)}, which is ${a}.`
+        :`<code>LDRB</code> fills them with zeros (zero extension), giving ${h32(a32)}, which is ${a32}. <code>LDRSB</code> would have copied the top bit into them, giving ${h32(ext8(a))}, which is ${sv(ext8(a))}.`)+
+      ` The <code>${ty.trim()}</code> declaration told the compiler which to use, so the reading is settled before <code>CMP</code> runs.</li>`,
+    `<li><code>CMP R1, R2</code> subtracts the widened values, ${h32(a32)} − ${h32(b32)} = ${h32(r32)}, and stores N=${yn(N32)} Z=${yn(Z32)} C=${yn(C32)} V=${yn(V32)}. The result itself is thrown away. `+
+      (same?`These are the lab\'s ${w}-bit flags too.`:`These are not the lab\'s ${w}-bit flags (N=${yn(N)} Z=${yn(Z)} C=${yn(C)} V=${yn(V)}): N and V describe the result at the width of the subtraction, which is now 32 bits. The branch still gets the same answer, because widening kept the values in the same order.`)+`</li>`,
+    `<li><code>${br.trim()} less</code> tests ${test}. ${S?`N is ${yn(N32)} and V is ${yn(V32)}`:`C is ${yn(C32)}`}, so the branch is <strong>${taken?'taken: execution jumps to <code>less</code>':'not taken: execution falls through to the next line'}</strong>.</li>`,
     `<li><code>MOV R0, #${taken?1:0}</code> sets r = ${taken?1:0}. In C, ${va} &lt; ${vb} is ${less}, so the program ${ok?'agrees ✓':'disagrees ✗'}.</li>`,
   ].join('');
   const bu=document.getElementById('asmTypeU'), bs=document.getElementById('asmTypeS');
