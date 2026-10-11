@@ -179,6 +179,9 @@ svg text{font-family:var(--mono);fill:var(--ink)}
 .cv{font-size:10.5px;font-weight:600}
 .cv.on{fill:var(--carry)}
 .cv.off{fill:var(--ink-2)}
+.fv{font-size:10.5px;font-weight:600}
+.fv.on{fill:var(--wire-on)}
+.fv.off{fill:var(--ink-2)}
 .cnst{font-size:11px;fill:var(--ink-2)}
 .tip{color:var(--ink-2);font-size:.82rem;margin:8px 0 0}
 
@@ -245,6 +248,7 @@ svg.blockdiag{width:100%;max-width:420px;height:auto;display:block;margin:6px 0 
 .fa svg{display:block;width:100%;height:auto}
 .jdot{fill:var(--wire-off)}
 .jdot.on{fill:var(--wire-on)}
+.jdot.carry.on{fill:var(--carry)}
 .faeq{font:.9rem/1.5 var(--mono);margin:0 0 10px}
 table.truth{border-collapse:collapse;font:.86rem var(--mono);font-variant-numeric:tabular-nums;margin:0 0 8px}
 table.truth th,table.truth td{border:1px solid var(--rule);padding:3px 11px;text-align:center}
@@ -265,6 +269,48 @@ table.add td.k{text-align:left;color:var(--ink-2);font-size:.8rem;white-space:no
 table.add td.cin{color:var(--carry);font-weight:600}
 table.add tr.sum td{border-top:2px solid var(--ink-2);font-weight:600}
 table.add td.q{color:var(--na)}
+
+/* ---------- CMP and the branches ---------- */
+.asmwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 24px;margin:4px 0 10px}
+@media (max-width:760px){.asmwrap{grid-template-columns:minmax(0,1fr)}}
+.asmwrap h3{margin:8px 0 4px}
+table.asm{width:100%}
+table.asm td{text-align:left;padding:3px 8px}
+table.asm td.mn{font-weight:600}
+table.asm td.k{color:var(--ink-2)}
+table.asm tr.take td{background:var(--bit-on);color:var(--bit-on-ink)}
+table.asm tr.take td.k{color:var(--bit-on-ink)}
+
+/* ---------- the same thing as a program ---------- */
+.asmprog{margin:0 0 6px;white-space:pre}
+.asmprog .ln{display:block;opacity:.5;padding:0 6px;margin:0 -6px;border-radius:4px}
+.asmprog .ln.run{opacity:1;background:var(--bit-on);color:var(--bit-on-ink)}
+.asmprog .cm{color:var(--ink-2)}
+.asmprog .ln.run .cm{color:var(--bit-on-ink);opacity:.8}
+ol.trace{margin:4px 0 14px;padding-left:22px}
+ol.trace li{margin:0 0 4px}
+
+/* ---------- under the hood ---------- */
+.hood{background:var(--paper-2);border:1px solid var(--rule);border-radius:8px;padding:8px 14px 4px;overflow-x:auto;margin:8px 0 14px;font:.8rem var(--mono);font-variant-numeric:tabular-nums}
+.hood h4{margin:8px 0 6px;font:600 .86rem var(--sans)}
+.hood h4+ .hrow .hb.c{color:var(--ink-2);font-size:9px}
+.hrow{display:flex;align-items:center;white-space:nowrap;margin:2px 0}
+.hrow .hl{width:132px;flex:none;color:var(--ink-2)}
+.hrow .hv{margin-left:12px;color:var(--ink-2)}
+.hb{display:inline-flex;width:15px;height:17px;flex:none;align-items:center;justify-content:center;border:1px solid var(--rule);background:var(--bit-off);font-weight:600;font-size:10.5px;margin-right:1px;border-radius:2px;color:var(--ink)}
+.hb.on{background:var(--bit-on);border-color:var(--bit-on);color:var(--bit-on-ink)}
+.hb.fill{border:1px dashed var(--ink-2)}
+.hb.fill.on{border-color:var(--bit-on-ink)}
+.hb.gap{margin-right:7px}
+.hb.blank{visibility:hidden}
+.hb.c{background:transparent;border-color:transparent;color:var(--ink-2);font-weight:500}
+.hb.c.on{color:var(--carry);font-weight:700}
+.hb.c.v{border-color:var(--carry);border-style:dashed}
+.hb.top{box-shadow:0 0 0 2px var(--carry) inset}
+.hflags{display:flex;flex-wrap:wrap;gap:4px 18px;margin:8px 0 2px;color:var(--ink-2)}
+.hflags b{color:var(--ink)}
+.hnote{color:var(--ink-2);font:.82rem/1.5 var(--sans);margin:6px 0 10px;white-space:normal}
+.hnote code{background:var(--paper);padding:1px 5px;border-radius:4px}
 
 .crumbs{font:.84rem var(--mono);color:var(--ink-2);margin:0 0 14px}
 .crumbs a{color:var(--ink-2)}
@@ -316,6 +362,7 @@ table.add td.q{color:var(--na)}
     <h2>Where this leads</h2>
     <ul>
       <li>The <a href="bit-lab.html">Bit Lab</a> puts this adder inside a working 8-bit ALU, with subtraction built from the same adder, the N Z C V flags, and guided exercises. Its lab draws each full adder as a box marked FA; every box is the five gates above.</li>
+      <li>The companion page <a href="adding-to-subtracting.html"><em>From adding to subtracting</em></a> shows how this same adder subtracts: invert B, feed a 1 into the carry-in, and read the borrow off the carry out.</li>
       <li>The companion page <a href="gates-to-register.html"><em>From gates to a register</em></a> shows the other half of a CPU: how the same kinds of gates are made to remember.</li>
       <li>The <a href="https://snowch.github.io/digital-design/">Digital Design course</a> carries on from signals to a complete working computer.</li>
     </ul>

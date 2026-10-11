@@ -36,6 +36,7 @@ works from any sub-path):
 | `docs/twos-complement.html`, `docs/twos-complement.pdf` | The two's complement tutorial: print-ready HTML source and the PDF rendered from it |
 | `docs/bit-lab.html` | Bit Lab: an interactive gate-level lab on bitwise operations, binary arithmetic and the N Z C V flags |
 | `docs/gates-to-alu.html`, `docs/gates-to-register.html` | The Bit Lab's companion pages: a full adder and a 4-bit ripple adder from gates; a latch, a clock and a register from gates |
+| `docs/adding-to-subtracting.html` | From adding to subtracting: wrap-around on a 16-position wheel, negation as NOT then add 1, and the adder subtracting with the borrow read off the carry, with bits you can tap |
 | `docs/flag-drills.html` | Flag drills: randomised predict-then-check exercises on CMP flags, ARM signed/unsigned branches, recovering a type from compiled code, and widening loads |
 | `.github/workflows/pages.yml` | Deploys the site to GitHub Pages on every push to `main` |
 | `.nojekyll` | Tells GitHub Pages to publish the files as-is |

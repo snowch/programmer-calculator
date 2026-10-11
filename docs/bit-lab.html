@@ -335,7 +335,7 @@ ol.trace li{margin:0 0 4px}
       <li>The truth tables of NOT, AND, OR and XOR.</li>
       <li>The idea that a CPU register holds a fixed number of bits (here 4 or 8).</li>
     </ul>
-    <p>Two companion pages build the parts this lab uses from those gates, with inputs you can tap: <a href="gates-to-alu.html"><em>From gates to an ALU</em></a> (a full adder, then four of them chained) and <a href="gates-to-register.html"><em>From gates to a register</em></a> (a latch, a clock, a 4-bit register). Read them first if you want the ground under your feet; the background below only summarises them.</p>
+    <p>Three companion pages build the parts this lab uses from those gates, with inputs you can tap: <a href="gates-to-alu.html"><em>From gates to an ALU</em></a> (a full adder, then four of them chained), <a href="adding-to-subtracting.html"><em>From adding to subtracting</em></a> (wrap-around, NOT then add 1, and the borrow as a carry) and <a href="gates-to-register.html"><em>From gates to a register</em></a> (a latch, a clock, a 4-bit register). Read them first if you want the ground under your feet; the background below only summarises them.</p>
     <p><strong>Notation.</strong> Gate equations on this page use the usual Boolean shorthand: <code>A ⊕ B</code> is XOR (1 exactly when the inputs differ), <code>A·B</code> or <code>AB</code> is AND, <code>A + B</code> is OR when it appears inside a gate equation, and <code>¬A</code> is NOT. So the full adder's carry-out, <code>A·B + cin·(A ⊕ B)</code>, reads "A and B, or cin and (A xor B)". Everywhere else on the page, + is ordinary addition.</p>
     <div class="check">
       <p>Self-check — if you can answer these without the lab, you're ready:</p>
@@ -448,6 +448,8 @@ ol.trace li{margin:0 0 4px}
     <p>Try it below. The lab's current A and B are fed through <code>CMP A, B</code>, and the snippet ends with <code>BEQ</code>, the one branch both readings share. The tables underneath list the other branches: what each one means, which flags it tests, whether it would be taken right now, and whether that matches the arithmetic under its reading. Change A or B in the lab above, or load a pair here.</p>
     <div class="row" id="asmPresets"></div>
     <pre class="work" id="asmCode"></pre>
+    <div class="row"><button class="small" type="button" id="asmWorkBtn" aria-pressed="false">show the working</button><span>how A − B was computed, bit by bit (explained on <a href="adding-to-subtracting.html">From adding to subtracting</a>)</span></div>
+    <div class="hood" id="asmWork" hidden></div>
     <div class="asmwrap">
       <div><h3>Unsigned reading</h3><div id="asmU"></div></div>
       <div><h3>Signed reading</h3><div id="asmS"></div></div>
@@ -1268,6 +1270,7 @@ function renderAsmProg(f,a,b,w){
     `<li><code>MOV R0, #${taken?1:0}</code> sets r = ${taken?1:0}. In C, ${va} &lt; ${vb} is ${less}, so the program ${ok?'agrees ✓':'disagrees ✗'}.</li>`,
   ].join('');
   renderHood(S,a,b,w,a32,b32);
+  renderCmpWork(a,b,w);
   document.querySelectorAll('button.asmType').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.s==='1')===S?'true':'false'));
 }
 document.querySelectorAll('button.asmType').forEach(b=>b.addEventListener('click',()=>{ asmSigned=b.dataset.s==='1'; update(); }));
@@ -1312,6 +1315,23 @@ function renderHood(S,a,b,w,a32,b32){
     `<p class="hnote">Same recipe as the lab's SUB, just 32 columns instead of ${w}. The two carries that decide C and V are the leftmost pair in the carries row. `+
     (S?`<code>BLT</code> reads N and V: ${N} ${N!==V?'≠':'='} ${V}, so it is ${N!==V?'taken':'not taken'}.`:`<code>BLO</code> reads only C: ${C===0?'0, a borrow happened, so it is taken':'1, no borrow, so it is not taken'}.`)+`</p>`;
 }
+
+/* ---------- CMP snippet: show the working ---------- */
+function renderCmpWork(a,b,w){
+  const host=document.getElementById('asmWork'); if(!host||host.hidden) return;
+  const M=mask(w), nb=(~b)&M; const cin=[1]; let res=0;
+  for(let i=0;i<w;i++){ const x=bit(a,i), y=bit(nb,i), c=cin[i]; res|=(x^y^c)<<i; cin[i+1]=(x&y)|(c&(x^y)); }
+  const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`, gap=i=>(i%8===0&&i!==0)?' gap':'';
+  const row=(label,x,opts={})=>{ let h=`<div class="hrow"><span class="hl">${label}</span>`+cell('','blank'); for(let i=w-1;i>=0;i--){ const v=bit(x,i); h+=cell(v,((v?'on':'')+gap(i)+(opts.top&&i===w-1?' top':'')).trim()); } return h+`<span class="hv">${opts.val||''}</span></div>`; };
+  let idx=`<div class="hrow"><span class="hl">bit</span>`+cell('','blank'); for(let i=w-1;i>=0;i--) idx+=cell((i%8===7||i%8===0||i===w-1)?i:'','c'+gap(i)); idx+='<span class="hv"></span></div>';
+  let car=`<div class="hrow"><span class="hl">carries</span>`+cell(cin[w],'c'+(cin[w]?' on':'')+' v'); for(let i=w-1;i>=0;i--) car+=cell(cin[i],('c'+(cin[i]?' on':'')+(i===w-1?' v':'')+gap(i)).trim()); car+='<span class="hv">bit 0 gets the + 1</span></div>';
+  const N=bit(res,w-1), Z=res===0?1:0, C=cin[w], V=cin[w]^cin[w-1];
+  host.innerHTML=`<p class="hnote" style="margin-top:4px">The ALU has no subtractor. It adds A to NOT B (every bit of B flipped) with a 1 fed into the first carry-in, which is A + (${M} − B) + 1 = A − B + ${M+1}; the +${M+1} is the carry that falls off the top, if there is one.</p>`+
+    idx+car+row('A',a,{val:`${hex(a,w)} = ${a}`})+row('NOT B',nb,{val:`${hex(nb,w)}  (B = ${hex(b,w)})`})+row('= A − B',res,{top:true,val:`${hex(res,w)} = ${res} unsigned, ${signed(res,w)} signed`})+
+    `<div class="hflags"><span><b>N</b> = top bit = <b>${N}</b></span><span><b>Z</b> = all zero? <b>${Z}</b></span><span><b>C</b> = carry out = <b>${C}</b>${C?', no borrow':', a borrow'}</span><span><b>V</b> = carry in ≠ carry out at bit ${w-1} = <b>${V}</b></span></div>`;
+}
+(function(){ const btn=document.getElementById('asmWorkBtn'), box=document.getElementById('asmWork'); if(!btn||!box) return;
+  btn.addEventListener('click',()=>{ box.hidden=!box.hidden; btn.setAttribute('aria-pressed',box.hidden?'false':'true'); btn.textContent=box.hidden?'show the working':'hide the working'; update(); }); })();
 /* ---------- theme ---------- */
 (function(){
   const btn=document.getElementById('themeBtn'); if(!btn) return;
