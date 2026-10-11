@@ -411,20 +411,7 @@ table.asm tr.take td.k{color:var(--bit-on-ink)}
   <section class="why" id="why"></section>
   <section class="tut" id="readings">
     <h2>Signed or unsigned: who decides?</h2>
-    <p>Not the register and not the adder: neither has anywhere to store the choice. The ALU produces one result and all four flags on every operation, which is enough to serve both readings at once, and the decision is made afterwards, one instruction at a time, by which flags the next instruction tests. Instruction sets therefore come in pairs. After <code>CMP a, b</code>, which computes a − b and keeps only the flags, ARM offers:</p>
-    <table>
-      <tr><th>Question</th><th>Unsigned branch</th><th>Signed branch</th></tr>
-      <tr><td>a &lt; b?</td><td><code>BLO</code>: C = 0 (a borrow was needed)</td><td><code>BLT</code>: N ≠ V</td></tr>
-      <tr><td>a ≥ b?</td><td><code>BHS</code>: C = 1</td><td><code>BGE</code>: N = V</td></tr>
-      <tr><td>a = b?</td><td><code>BEQ</code>: Z = 1</td><td><code>BEQ</code>: Z = 1</td></tr>
-    </table>
-    <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
-    <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Try <code>0x7F + 1</code> and <code>0xFF + 1</code> from the presets below and watch the two cards disagree.</p>
-  </section>
-
-  <section class="tut" id="asm">
-    <h2>Try it as assembly: CMP and the branches</h2>
-    <p>A compare instruction is a subtraction that throws its result away and keeps the flags; the branch after it reads them. Below, the lab's current A and B are fed through <code>CMP A, B</code>, and every conditional branch says whether it would be taken and whether the arithmetic agrees under its reading. Change A or B in the lab above, or load a pair here.</p>
+    <p>Not the register and not the adder: neither has anywhere to store the choice. The ALU produces one result and all four flags on every operation, which is enough to serve both readings at once, and the decision is made afterwards, one instruction at a time, by which flags the next instruction tests. Instruction sets therefore come in pairs: a compare instruction is a subtraction that throws its result away and keeps the flags, and after it there is an unsigned branch and a signed branch for every question. Below, the lab's current A and B are fed through <code>CMP A, B</code>, and every ARM conditional branch says whether it would be taken and whether the arithmetic agrees under its reading. Change A or B in the lab above, or load a pair here.</p>
     <div class="row" id="asmPresets"></div>
     <pre class="work" id="asmCode"></pre>
     <div class="asmwrap">
@@ -432,7 +419,10 @@ table.asm tr.take td.k{color:var(--bit-on-ink)}
       <div><h3>Signed reading</h3><div id="asmS"></div></div>
     </div>
     <p class="tip">ARM mnemonics. x86 has the same pairs under other names: <code>jb</code>/<code>jae</code>/<code>ja</code>/<code>jbe</code> for unsigned and <code>jl</code>/<code>jge</code>/<code>jg</code>/<code>jle</code> for signed, except that x86 sets its carry flag to 1 when a borrow was needed, the opposite of ARM.</p>
+    <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
+    <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Load <code>0x80 vs 0x7F</code> above and watch the two readings order the same bits oppositely.</p>
   </section>
+
   <section class="presets">
     <h2>Try these</h2>
     <div id="presets"></div>
