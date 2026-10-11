@@ -288,6 +288,28 @@ table.asm tr.take td.k{color:var(--bit-on-ink)}
 .asmprog .ln.run .cm{color:var(--bit-on-ink);opacity:.8}
 ol.trace{margin:4px 0 14px;padding-left:22px}
 ol.trace li{margin:0 0 4px}
+
+/* ---------- under the hood ---------- */
+.hood{background:var(--paper-2);border:1px solid var(--rule);border-radius:8px;padding:8px 14px 4px;overflow-x:auto;margin:8px 0 14px;font:.8rem var(--mono);font-variant-numeric:tabular-nums}
+.hood h4{margin:8px 0 6px;font:600 .86rem var(--sans)}
+.hood h4+ .hrow .hb.c{color:var(--ink-2);font-size:9px}
+.hrow{display:flex;align-items:center;white-space:nowrap;margin:2px 0}
+.hrow .hl{width:132px;flex:none;color:var(--ink-2)}
+.hrow .hv{margin-left:12px;color:var(--ink-2)}
+.hb{display:inline-flex;width:15px;height:17px;flex:none;align-items:center;justify-content:center;border:1px solid var(--rule);background:var(--bit-off);font-weight:600;font-size:10.5px;margin-right:1px;border-radius:2px;color:var(--ink)}
+.hb.on{background:var(--bit-on);border-color:var(--bit-on);color:var(--bit-on-ink)}
+.hb.fill{border:1px dashed var(--ink-2)}
+.hb.fill.on{border-color:var(--bit-on-ink)}
+.hb.gap{margin-right:7px}
+.hb.blank{visibility:hidden}
+.hb.c{background:transparent;border-color:transparent;color:var(--ink-2);font-weight:500}
+.hb.c.on{color:var(--carry);font-weight:700}
+.hb.c.v{border-color:var(--carry);border-style:dashed}
+.hb.top{box-shadow:0 0 0 2px var(--carry) inset}
+.hflags{display:flex;flex-wrap:wrap;gap:4px 18px;margin:8px 0 2px;color:var(--ink-2)}
+.hflags b{color:var(--ink)}
+.hnote{color:var(--ink-2);font:.82rem/1.5 var(--sans);margin:6px 0 10px;white-space:normal}
+.hnote code{background:var(--paper);padding:1px 5px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -439,6 +461,9 @@ ol.trace li{margin:0 0 4px}
       <div><h3>ARM assembly</h3><pre class="work asmprog" id="asmArm"></pre></div>
     </div>
     <ol class="trace" id="asmTrace"></ol>
+    <h3>Under the hood</h3>
+    <p>The same two instructions, bit by bit. First the load, which has to turn a byte into a 32-bit register, then the compare, which is the lab's subtraction with 32 columns instead of eight. Switch the declaration above and watch which cells change.</p>
+    <div class="hood" id="hood"></div>
     <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. (A load is widening whenever the register is wider than the value in memory, which is every byte load on a 32-bit machine: the spare bits have to be filled with something, and the two loads fill them differently, as the program above shows.) A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
     <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Load <code>0x80 vs 0x7F</code> above and watch the two readings order the same bits oppositely.</p>
   </section>
@@ -1239,6 +1264,7 @@ function renderAsmProg(f,a,b,w){
     `<li><code>${br.trim()} less</code> tests ${test}. ${S?`N is ${yn(N32)} and V is ${yn(V32)}`:`C is ${yn(C32)}`}, so the branch is <strong>${taken?'taken: execution jumps to <code>less</code>':'not taken: execution falls through to the next line'}</strong>.</li>`,
     `<li><code>MOV R0, #${taken?1:0}</code> sets r = ${taken?1:0}. In C, ${va} &lt; ${vb} is ${less}, so the program ${ok?'agrees ✓':'disagrees ✗'}.</li>`,
   ].join('');
+  renderHood(S,a,b,w,a32,b32);
   const bu=document.getElementById('asmTypeU'), bs=document.getElementById('asmTypeS');
   if(bu){ bu.setAttribute('aria-pressed', S?'false':'true'); bs.setAttribute('aria-pressed', S?'true':'false'); }
 }
@@ -1247,6 +1273,47 @@ function renderAsmProg(f,a,b,w){
   bu.addEventListener('click',()=>{ asmSigned=false; update(); });
   bs.addEventListener('click',()=>{ asmSigned=true; update(); });
 })();
+/* ---------- under the hood: the load and the compare, bit by bit ---------- */
+function renderHood(S,a,b,w,a32,b32){
+  const host=document.getElementById('hood'); if(!host) return;
+  const nb=(~b32)>>>0;
+  const cin=new Array(33).fill(0); cin[0]=1; let res=0;
+  for(let i=0;i<32;i++){ const x=bit(a32,i), y=bit(nb,i), c=cin[i]; res|=((x^y^c)<<i); cin[i+1]=(x&y)|(c&(x^y)); }
+  res=res>>>0;
+  const N=res>>>31, Z=res===0?1:0, C=cin[32], V=cin[32]^cin[31];
+  const h32=x=>'0x'+x.toString(16).toUpperCase().padStart(8,'0');
+  const sv=x=>x>>>31?x-4294967296:x;
+  const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`;
+  const gap=i=>(i%8===0&&i!==0)?' gap':'';
+  // one row: lead cell + 32 cells (bit 31 first) + value
+  const row=(label,cells,val)=>`<div class="hrow"><span class="hl">${label}</span>${cells}<span class="hv">${val||''}</span></div>`;
+  const bits=(x,opts={})=>{ let h=cell('', 'blank'); for(let i=31;i>=0;i--){ const v=bit(x,i); let cls=(v?'on':'')+gap(i); if(opts.fill&&i>=w) cls+=' fill'; if(opts.blank&&i>=w) cls=' blank'; if(opts.top&&i===31) cls+=' top'; h+=cell(v,cls.trim()); } return h; };
+  const idx=()=>{ let h=cell('', 'blank'); for(let i=31;i>=0;i--){ const t=(i%8===7||i%8===0)?i:''; h+=cell(t,'c'+gap(i)); } return h; };
+  const carries=()=>{ let h=cell(cin[32],'c'+(cin[32]?' on':'')+' v'); for(let i=31;i>=0;i--){ h+=cell(cin[i],('c'+(cin[i]?' on':'')+(i===31?' v':'')+gap(i)).trim()); } return h; };
+  const ld=S?'LDRSB':'LDRB', fillTxt=S?`copies bit ${w-1} of the byte into bits ${w} to 31`:`puts 0 into bits ${w} to 31`;
+  host.innerHTML=
+    `<h4>1. The load widens the byte</h4>`+
+    row('bit', idx())+
+    row(`a in memory`, bits(a,{blank:true}), `${hex(a,w)}`)+
+    row(`R1 after ${ld}`, bits(a32,{fill:true}), `${h32(a32)} = ${S?sv(a32):a32}`)+
+    row(`b in memory`, bits(b,{blank:true}), `${hex(b,w)}`)+
+    row(`R2 after ${ld}`, bits(b32,{fill:true}), `${h32(b32)} = ${S?sv(b32):b32}`)+
+    `<p class="hnote">Only the right-hand ${w} cells of each register came from memory. <code>${ld}</code> ${fillTxt}, the dashed cells. ${S?`A copied 1 keeps a negative number negative at 32 bits; a copied 0 keeps a positive one positive.`:`Zeros keep the value the same, ${a32}, now with room to spare.`}</p>`+
+    `<h4>2. CMP subtracts: R1 + NOT R2 + 1, 32 bits wide</h4>`+
+    row('bit', idx())+
+    row('carries', carries(), `bit 0 gets the + 1`)+
+    row('R1', bits(a32), h32(a32))+
+    row('NOT R2', bits(nb), h32(nb))+
+    row('= R1 − R2', bits(res,{top:true}), `${h32(res)}, thrown away`)+
+    `<div class="hflags">`+
+    `<span><b>N</b> = bit 31 of the result = <b>${N}</b></span>`+
+    `<span><b>Z</b> = all 32 bits zero? <b>${Z}</b></span>`+
+    `<span><b>C</b> = carry out of bit 31 = <b>${C}</b></span>`+
+    `<span><b>V</b> = carry into bit 31 ≠ carry out = ${cin[31]} ≠ ${cin[32]}? <b>${V}</b></span>`+
+    `</div>`+
+    `<p class="hnote">Same recipe as the lab's SUB, just 32 columns instead of ${w}. The two carries that decide C and V are the leftmost pair in the carries row. `+
+    (S?`<code>BLT</code> reads N and V: ${N} ${N!==V?'≠':'='} ${V}, so it is ${N!==V?'taken':'not taken'}.`:`<code>BLO</code> reads only C: ${C===0?'0, a borrow happened, so it is taken':'1, no borrow, so it is not taken'}.`)+`</p>`;
+}
 /* ---------- theme ---------- */
 (function(){
   const btn=document.getElementById('themeBtn'); if(!btn) return;
