@@ -268,6 +268,17 @@ table.add td.k{text-align:left;color:var(--ink-2);font-size:.8rem;white-space:no
 table.add td.cin{color:var(--carry);font-weight:600}
 table.add tr.sum td{border-top:2px solid var(--ink-2);font-weight:600}
 table.add td.q{color:var(--na)}
+
+/* ---------- CMP and the branches ---------- */
+.asmwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 24px;margin:4px 0 10px}
+@media (max-width:760px){.asmwrap{grid-template-columns:minmax(0,1fr)}}
+.asmwrap h3{margin:8px 0 4px}
+table.asm{width:100%}
+table.asm td{text-align:left;padding:3px 8px}
+table.asm td.mn{font-weight:600}
+table.asm td.k{color:var(--ink-2)}
+table.asm tr.take td{background:var(--bit-on);color:var(--bit-on-ink)}
+table.asm tr.take td.k{color:var(--bit-on-ink)}
 </style>
 </head>
 <body>
@@ -411,6 +422,17 @@ table.add td.q{color:var(--na)}
     <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Try <code>0x7F + 1</code> and <code>0xFF + 1</code> from the presets below and watch the two cards disagree.</p>
   </section>
 
+  <section class="tut" id="asm">
+    <h2>Try it as assembly: CMP and the branches</h2>
+    <p>A compare instruction is a subtraction that throws its result away and keeps the flags; the branch after it reads them. Below, the lab's current A and B are fed through <code>CMP A, B</code>, and every conditional branch says whether it would be taken and whether the arithmetic agrees under its reading. Change A or B in the lab above, or load a pair here.</p>
+    <div class="row" id="asmPresets"></div>
+    <pre class="work" id="asmCode"></pre>
+    <div class="asmwrap">
+      <div><h3>Unsigned reading</h3><div id="asmU"></div></div>
+      <div><h3>Signed reading</h3><div id="asmS"></div></div>
+    </div>
+    <p class="tip">ARM mnemonics. x86 has the same pairs under other names: <code>jb</code>/<code>jae</code>/<code>ja</code>/<code>jbe</code> for unsigned and <code>jl</code>/<code>jge</code>/<code>jg</code>/<code>jle</code> for signed, except that x86 sets its carry flag to 1 when a borrow was needed, the opposite of ARM.</p>
+  </section>
   <section class="presets">
     <h2>Try these</h2>
     <div id="presets"></div>
@@ -1099,6 +1121,59 @@ document.querySelectorAll('[data-ex]').forEach(b=>b.addEventListener('click',()=
   document.getElementById('lab').scrollIntoView({behavior:'smooth'});
 }));
 
+/* ---------- CMP and the branches ---------- */
+function cmpFlags(a,b,w){
+  const M=mask(w), xb=(~b)&M; let c=1, res=0;
+  for(let i=0;i<w;i++){ const x=bit(a,i), y=bit(xb,i), s=x^y^c; res|=s<<i; const cn=(x&y)|(c&(x^y)); if(i===w-1){ const vin=c; c=cn; return {res, n:bit(res,w-1), z:res===0?1:0, c, v:c^vin}; } c=cn; }
+}
+const ASM_PRESETS=[
+  ['5 vs 3', 5, 3], ['3 vs 5', 3, 5], ['0x80 vs 0x7F', 0x80, 0x7F], ['0xFF vs 0x01', 0xFF, 0x01], ['0x7F vs 0x7F', 0x7F, 0x7F],
+];
+(function(){
+  const host=document.getElementById('asmPresets'); if(!host) return;
+  const cap=document.createElement('span'); cap.textContent='Load a pair'; host.appendChild(cap);
+  for(const [t,a,b] of ASM_PRESETS){
+    const btn=document.createElement('button'); btn.className='small'; btn.type='button'; btn.textContent=t;
+    btn.addEventListener('click',()=>{ state.op='SUB'; state.w=8; state.a=a; state.b=b; update(); });
+    host.appendChild(btn);
+  }
+})();
+function renderAsm(r){
+  const code=document.getElementById('asmCode'); if(!code) return;
+  const w=state.w, M=mask(w), a=state.a&M, b=state.b&M, f=cmpFlags(a,b,w);
+  const ua=a, ub=b, sa=signed(a,w), sb=signed(b,w);
+  const yn=x=>x?'1':'0';
+  code.textContent=
+`    CMP  A, B        ; flags <- A - B, result discarded
+    ; A = ${hex(a,w)} = ${ua} unsigned, ${sa} signed
+    ; B = ${hex(b,w)} = ${ub} unsigned, ${sb} signed
+    ; A - B = ${hex(f.res,w)}   N=${yn(f.n)} Z=${yn(f.z)} C=${yn(f.c)} V=${yn(f.v)}`;
+  const rows=(list,host)=>{
+    let h='<table class="truth asm"><tr><th>branch</th><th>means</th><th>tests</th><th>taken?</th><th>arithmetic</th></tr>';
+    for(const [mn,meaning,test,taken,truth] of list){
+      h+=`<tr class="${taken?'take':''}"><td class="mn">${mn}</td><td class="k">${meaning}</td><td class="k">${test}</td><td>${taken?'taken':'not taken'}</td><td class="k">${truth?'true':'false'} ${taken===truth?'✓':'✗'}</td></tr>`;
+    }
+    document.getElementById(host).innerHTML=h+'</table>';
+  };
+  const N=f.n,Z=f.z,C=f.c,V=f.v;
+  rows([
+    ['BLO','A &lt; B','C = 0', C===0, ua<ub],
+    ['BHS','A ≥ B','C = 1', C===1, ua>=ub],
+    ['BHI','A &gt; B','C = 1 and Z = 0', C===1&&Z===0, ua>ub],
+    ['BLS','A ≤ B','C = 0 or Z = 1', C===0||Z===1, ua<=ub],
+    ['BEQ','A = B','Z = 1', Z===1, ua===ub],
+    ['BNE','A ≠ B','Z = 0', Z===0, ua!==ub],
+  ],'asmU');
+  rows([
+    ['BLT','A &lt; B','N ≠ V', N!==V, sa<sb],
+    ['BGE','A ≥ B','N = V', N===V, sa>=sb],
+    ['BGT','A &gt; B','Z = 0 and N = V', Z===0&&N===V, sa>sb],
+    ['BLE','A ≤ B','Z = 1 or N ≠ V', Z===1||N!==V, sa<=sb],
+    ['BEQ','A = B','Z = 1', Z===1, sa===sb],
+    ['BNE','A ≠ B','Z = 0', Z===0, sa!==sb],
+  ],'asmS');
+}
+
 /* ---------- theme ---------- */
 (function(){
   const btn=document.getElementById('themeBtn'); if(!btn) return;
@@ -1289,7 +1364,7 @@ renderReg();
 
 function update(){
   const r=compute();
-  renderOps(); renderCircuit(r); renderValues(r); renderFlags(r); renderWhy(r);
+  renderOps(); renderCircuit(r); renderValues(r); renderFlags(r); renderWhy(r); renderAsm(r);
   persist();
 }
 update();
