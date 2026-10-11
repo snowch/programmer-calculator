@@ -1287,7 +1287,7 @@ function renderHood(S,a,b,w,a32,b32){
   const gap=i=>(i%8===0&&i!==0)?' gap':'';
   // one row: lead cell + 32 cells (bit 31 first) + value
   const row=(label,cells,val)=>`<div class="hrow"><span class="hl">${label}</span>${cells}<span class="hv">${val||''}</span></div>`;
-  const bits=(x,opts={})=>{ let h=cell('', 'blank'); for(let i=31;i>=0;i--){ const v=bit(x,i); let cls=(v?'on':'')+gap(i); if(opts.fill&&i>=w) cls+=' fill'; if(opts.blank&&i>=w) cls=' blank'; if(opts.top&&i===31) cls+=' top'; h+=cell(v,cls.trim()); } return h; };
+  const bits=(x,opts={})=>{ let h=cell('', 'blank'); for(let i=31;i>=0;i--){ const v=bit(x,i); let cls=(v?'on':'')+gap(i); if(opts.fill&&i>=w) cls+=' fill'; if(opts.blank&&i>=w) cls=' blank'+gap(i); if(opts.top&&i===31) cls+=' top'; h+=cell(v,cls.trim()); } return h; };
   const idx=()=>{ let h=cell('', 'blank'); for(let i=31;i>=0;i--){ const t=(i%8===7||i%8===0)?i:''; h+=cell(t,'c'+gap(i)); } return h; };
   const carries=()=>{ let h=cell(cin[32],'c'+(cin[32]?' on':'')+' v'); for(let i=31;i>=0;i--){ h+=cell(cin[i],('c'+(cin[i]?' on':'')+(i===31?' v':'')+gap(i)).trim()); } return h; };
   const ld=S?'LDRSB':'LDRB', fillTxt=S?`copies bit ${w-1} of the byte into bits ${w} to 31`:`puts 0 into bits ${w} to 31`;
