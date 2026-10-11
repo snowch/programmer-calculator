@@ -279,6 +279,15 @@ table.asm td.mn{font-weight:600}
 table.asm td.k{color:var(--ink-2)}
 table.asm tr.take td{background:var(--bit-on);color:var(--bit-on-ink)}
 table.asm tr.take td.k{color:var(--bit-on-ink)}
+
+/* ---------- the same thing as a program ---------- */
+.asmprog{margin:0 0 6px;white-space:pre}
+.asmprog .ln{display:block;opacity:.5;padding:0 6px;margin:0 -6px;border-radius:4px}
+.asmprog .ln.run{opacity:1;background:var(--bit-on);color:var(--bit-on-ink)}
+.asmprog .cm{color:var(--ink-2)}
+.asmprog .ln.run .cm{color:var(--bit-on-ink);opacity:.8}
+ol.trace{margin:4px 0 14px;padding-left:22px}
+ol.trace li{margin:0 0 4px}
 </style>
 </head>
 <body>
@@ -419,6 +428,14 @@ table.asm tr.take td.k{color:var(--bit-on-ink)}
       <div><h3>Signed reading</h3><div id="asmS"></div></div>
     </div>
     <p class="tip">ARM mnemonics. x86 has the same pairs under other names: <code>jb</code>/<code>jae</code>/<code>ja</code>/<code>jbe</code> for unsigned and <code>jl</code>/<code>jge</code>/<code>jg</code>/<code>jle</code> for signed, except that x86 sets its carry flag to 1 when a borrow was needed, the opposite of ARM.</p>
+    <h3>The same thing as a program</h3>
+    <p>Here is the same comparison as code: one <code>if</code> in C, and the ARM assembly a compiler turns it into. Pick which type <code>a</code> and <code>b</code> are declared as. The only C line that changes is the declaration, yet the compiler emits a different load and a different branch, because the type tells it which member of each pair to use. The lines that actually run for the lab's current A and B are highlighted, and the trace underneath walks through them.</p>
+    <div class="row"><span>Declared as</span><button class="small" type="button" id="asmTypeU" aria-pressed="true">uint8_t (unsigned)</button><button class="small" type="button" id="asmTypeS" aria-pressed="false">int8_t (signed)</button></div>
+    <div class="asmwrap">
+      <div><h3>C</h3><pre class="work asmprog" id="asmC"></pre></div>
+      <div><h3>ARM assembly</h3><pre class="work asmprog" id="asmArm"></pre></div>
+    </div>
+    <ol class="trace" id="asmTrace"></ol>
     <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
     <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Load <code>0x80 vs 0x7F</code> above and watch the two readings order the same bits oppositely.</p>
   </section>
@@ -1162,8 +1179,58 @@ function renderAsm(r){
     ['BEQ','A = B','Z = 1', Z===1, sa===sb],
     ['BNE','A ≠ B','Z = 0', Z===0, sa!==sb],
   ],'asmS');
+  renderAsmProg(f,a,b,w);
 }
 
+/* ---------- the same thing as a program ---------- */
+let asmSigned=false;
+function renderAsmProg(f,a,b,w){
+  const cH=document.getElementById('asmC'), aH=document.getElementById('asmArm'), tH=document.getElementById('asmTrace');
+  if(!cH||!aH||!tH) return;
+  const S=asmSigned, va=S?signed(a,w):a, vb=S?signed(b,w):b, less=va<vb;
+  const N=f.n,Z=f.z,C=f.c,V=f.v, yn=x=>x?'1':'0';
+  const taken=S?(N!==V):(C===0);
+  const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const ln=(run,code,cm)=>`<span class="ln${run?' run':''}">${esc(code.padEnd(22))}${cm?'<span class="cm">'+esc(cm)+'</span>':''}</span>`;
+  const ty=S?'int8_t ':'uint8_t';
+  const note=w!==8?[ln(false,'',`// lab is ${w} bits wide; C's smallest types are 8, so read these as ${w}-bit`)]:[];
+  cH.innerHTML=[...note,
+    ln(true, `${ty} a = ${hex(a,w)};`, `// ${va}`),
+    ln(true, `${ty} b = ${hex(b,w)};`, `// ${vb}`),
+    ln(true, `int r;`),
+    ln(true, `if (a < b)`, `// ${va} < ${vb} is ${less}`),
+    ln(less, `    r = 1;`, less?`// r = 1`:''),
+    ln(!less,`else`),
+    ln(!less,`    r = 0;`, !less?`// r = 0`:''),
+  ].join('');
+  const ldr=S?'LDRSB':'LDRB ', br=S?'BLT  ':'BLO  ';
+  const test=S?`N ≠ V`:`C = 0`;
+  const now=S?`${yn(N)} ${N!==V?'≠':'='} ${yn(V)}`:`C=${yn(C)}`;
+  aH.innerHTML=[
+    ln(true, `      ${ldr} R1, [a]`, `; R1 = ${hex(a,w)}, ${S?'sign':'zero'}-extended`),
+    ln(true, `      ${ldr} R2, [b]`, `; R2 = ${hex(b,w)}`),
+    ln(true, `      CMP   R1, R2`, `; ${hex(a,w)} - ${hex(b,w)}: N=${yn(N)} Z=${yn(Z)} C=${yn(C)} V=${yn(V)}`),
+    ln(true, `      ${br} less`, `; taken if ${test} (${now}: ${taken?'yes':'no'})`),
+    ln(!taken,`      MOV   R0, #0`, !taken?`; r = 0`:''),
+    ln(!taken,`      B     done`),
+    ln(taken, `less: MOV   R0, #1`, taken?`; r = 1`:''),
+    ln(true, `done:`, `; r = ${taken?1:0}`),
+  ].join('');
+  const ok=taken===less;
+  tH.innerHTML=[
+    `<li><code>${S?'LDRSB':'LDRB'}</code> loads the bytes ${S?'with sign extension, because <code>int8_t</code> is signed':'with zero extension, because <code>uint8_t</code> is unsigned'}: the declaration has already chosen the load.</li>`,
+    `<li><code>CMP R1, R2</code> computes ${hex(a,w)} − ${hex(b,w)} = ${hex(f.res,w)} and stores N=${yn(N)} Z=${yn(Z)} C=${yn(C)} V=${yn(V)}. The result itself is thrown away.</li>`,
+    `<li><code>${br.trim()} less</code> tests ${test}. ${S?`N is ${yn(N)} and V is ${yn(V)}`:`C is ${yn(C)}`}, so the branch is <strong>${taken?'taken: execution jumps to <code>less</code>':'not taken: execution falls through to the next line'}</strong>.</li>`,
+    `<li><code>MOV R0, #${taken?1:0}</code> sets r = ${taken?1:0}. In C, ${va} &lt; ${vb} is ${less}, so the program ${ok?'agrees ✓':'disagrees ✗'}.</li>`,
+  ].join('');
+  const bu=document.getElementById('asmTypeU'), bs=document.getElementById('asmTypeS');
+  if(bu){ bu.setAttribute('aria-pressed', S?'false':'true'); bs.setAttribute('aria-pressed', S?'true':'false'); }
+}
+(function(){
+  const bu=document.getElementById('asmTypeU'), bs=document.getElementById('asmTypeS'); if(!bu||!bs) return;
+  bu.addEventListener('click',()=>{ asmSigned=false; update(); });
+  bs.addEventListener('click',()=>{ asmSigned=true; update(); });
+})();
 /* ---------- theme ---------- */
 (function(){
   const btn=document.getElementById('themeBtn'); if(!btn) return;
