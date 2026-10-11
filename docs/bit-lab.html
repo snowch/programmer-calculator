@@ -467,6 +467,7 @@ ol.trace li{margin:0 0 4px}
     <div class="hood" id="hood"></div>
     <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. (A load is widening whenever the register is wider than the value in memory, which is every byte load on a 32-bit machine: the spare bits have to be filled with something, and the two loads fill them differently, as the program above shows.) A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
     <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Load <code>0x80 vs 0x7F</code> above and watch the two readings order the same bits oppositely.</p>
+    <p>To make this automatic, the <a href="flag-drills.html">flag drills</a> page gives randomised predict-then-check exercises on exactly these four things: the flags of a <code>CMP</code>, which branches fire, recovering the type from a compiled <code>if</code>, and widening a byte by hand.</p>
   </section>
 
   <section class="presets">
@@ -695,6 +696,7 @@ ol.trace li{margin:0 0 4px}
   <section class="tut" id="next">
     <h2>What's next</h2>
     <ul>
+      <li>Drill the flags until they are reflex with the <a href="flag-drills.html">flag drills</a>: predict N Z C V, pick the branches that fire, recover the type from a compiled <code>if</code>, widen a byte by hand.</li>
       <li>Carry on from signals to a working CPU in the <a href="https://snowch.github.io/digital-design/">Digital Design course</a>, which has lessons on gates, the ALU, registers, flags and instructions.</li>
       <li>Build the bench version above, then swap the 74HC283 for the four gate-built adders of step 2 and watch a real ripple.</li>
       <li>Put a multiplexer in front of the adder so one circuit can do ADD, SUB, AND and OR — that's the ALU in Harris &amp; Harris, chapter 5, and the Nand2Tetris ALU in project 2.</li>
