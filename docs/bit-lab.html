@@ -858,8 +858,9 @@ function renderCircuit(r){
   const yA=22, yB=unary?null:70, yG = unary?82:130, yR = yG+ (op.kind==='arith'?98:92);
   const H=yR+106;
   svg.setAttribute('viewBox',`0 -8 ${W} ${H+8}`);
-  svg.style.minWidth = w===8 ? '420px' : '0';
-  svg.style.maxWidth = Math.round(760*W/(left+colW*8+right))+'px';  // same scale at every width, so 4-bit is not taller than 8-bit
+  const W8=left+colW*8+right, avail=(svg.parentElement&&svg.parentElement.clientWidth?svg.parentElement.clientWidth-16:760);
+  const scale=Math.min(760,Math.max(420,avail))/W8;  // the scale the 8-bit drawing gets; use it at 4 bits too so the drawing never grows taller
+  svg.style.width=Math.round(W*scale)+'px'; svg.style.maxWidth='none'; svg.style.minWidth='0';
   const colX = i => left + colW*(w-1-i) + colW/2;   // bit i (LSB right)
 
   // row labels
@@ -1334,6 +1335,8 @@ function renderCmpWork(a,b,w){
 }
 (function(){ const btn=document.getElementById('asmWorkBtn'), box=document.getElementById('asmWork'); if(!btn||!box) return;
   btn.addEventListener('click',()=>{ box.hidden=!box.hidden; btn.setAttribute('aria-pressed',box.hidden?'false':'true'); btn.textContent=box.hidden?'show the working':'hide the working'; update(); }); })();
+
+window.addEventListener('resize',()=>{ clearTimeout(window.__bitlabResize); window.__bitlabResize=setTimeout(update,120); });
 /* ---------- theme ---------- */
 (function(){
   const btn=document.getElementById('themeBtn'); if(!btn) return;
