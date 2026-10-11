@@ -859,6 +859,7 @@ function renderCircuit(r){
   const H=yR+106;
   svg.setAttribute('viewBox',`0 -8 ${W} ${H+8}`);
   svg.style.minWidth = w===8 ? '420px' : '0';
+  svg.style.maxWidth = Math.round(760*W/(left+colW*8+right))+'px';  // same scale at every width, so 4-bit is not taller than 8-bit
   const colX = i => left + colW*(w-1-i) + colW/2;   // bit i (LSB right)
 
   // row labels
