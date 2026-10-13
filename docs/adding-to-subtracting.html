@@ -312,10 +312,18 @@ ol.trace li{margin:0 0 4px}
 .hnote{color:var(--ink-2);font:.82rem/1.5 var(--sans);margin:6px 0 10px;white-space:normal}
 .hnote code{background:var(--paper);padding:1px 5px;border-radius:4px}
 
+
 .crumbs{font:.84rem var(--mono);color:var(--ink-2);margin:0 0 14px}
 .crumbs a{color:var(--ink-2)}
 .crumbs a:hover{color:var(--ink)}
 .tut.first{margin-top:0;border-top:0;padding-top:0}
+nav.pager{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:34px 0 0;padding:14px 0;border-top:1px solid var(--rule);font:.9rem var(--sans)}
+nav.pager a{color:var(--ink);text-decoration:none;border:1px solid var(--rule);border-radius:8px;padding:8px 12px}
+nav.pager a:hover{border-color:var(--ink-2)}
+nav.pager .next{text-align:right}
+nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
+@media (max-width:640px){nav.pager{grid-template-columns:1fr}nav.pager .next{text-align:left}}
+
 .wheelwrap{display:grid;grid-template-columns:300px minmax(0,1fr);gap:8px 24px;align-items:center;margin:8px 0 12px}
 @media (max-width:640px){.wheelwrap{grid-template-columns:minmax(0,1fr)}}
 .wheelsvg{width:100%;max-width:300px;height:auto;display:block}
@@ -331,13 +339,14 @@ ol.trace li{margin:0 0 4px}
 .hb.tap{cursor:pointer}
 .hb.tap:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .hood#brow{margin-bottom:-6px}
+
 </style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <p class="crumbs"><a href="../">Programmer Calculator</a> · <a href="bit-lab.html">Bit Lab</a> · <a href="https://snowch.github.io/">snowch.github.io</a></p>
+      <p class="crumbs"><a href="notes.html">From gates to a compiled if</a> · part 2 of 7 · <a href="../">Programmer Calculator</a> · <a href="https://snowch.github.io/">snowch.github.io</a></p>
       <h1>From adding to subtracting</h1>
       <p class="lede">How 3 − 5 comes out as 0xFE, why that is the right answer, and how an adder subtracts without a subtractor: invert B, add 1, and read the borrow off the carry.</p>
     </div>
@@ -378,7 +387,7 @@ ol.trace li{margin:0 0 4px}
   <section class="tut" id="next">
     <h2>Where this leads</h2>
     <ul>
-      <li>The <a href="bit-lab.html">Bit Lab</a>'s SUB and CMP operations are this circuit at 8 bits, with all four flags drawn from gates. Its <a href="bit-lab.html#readings">Signed or unsigned: who decides?</a> section shows a <code>CMP</code> whose working you can now read.</li>
+      <li>The <a href="bit-lab.html">Bit Lab</a>'s SUB and CMP operations are this circuit at 8 bits, with all four flags drawn from gates. Its <a href="who-decides.html">Signed or unsigned: who decides?</a> section shows a <code>CMP</code> whose working you can now read.</li>
       <li><a href="bytes-to-registers.html">From bytes to registers</a> is the other thing a compare needs on a 32-bit machine: how a byte is widened to fill a register, and what the two loads write into the spare bits.</li>
       <li>The <a href="flag-drills.html">flag drills</a> start with exactly this: predict the flags of a <code>CMP</code>, then see the rows above drawn for the pair.</li>
       <li>The <a href="twos-complement.pdf">two's complement tutorial</a> (PDF) covers the arithmetic in more depth: why the negative labels are placed where they are, overflow, and sign extension.</li>
@@ -386,11 +395,11 @@ ol.trace li{margin:0 0 4px}
     </ul>
   </section>
 
+  <nav class="pager" aria-label="Series navigation"><a class="prev" href="gates-to-alu.html">Previous: From gates to an ALU</a><a class="up" href="notes.html">Contents</a><a class="next" href="bit-lab.html">Next: Bit Lab: the ALU and its flags</a></nav>
   <footer class="site">
-    <a href="gates-to-alu.html">From gates to an ALU</a>
-    <a href="gates-to-register.html">From gates to a register</a>
-    <a href="bit-lab.html">Bit Lab: gates, bits and flags</a>
-    <a href="flag-drills.html">Flag drills</a>
+    <a href="notes.html">From gates to a compiled if: contents</a>
+    <a href="../">Programmer Calculator app</a>
+    <a href="twos-complement.pdf">Two's complement tutorial (PDF)</a>
   </footer>
 </main>
 <script>

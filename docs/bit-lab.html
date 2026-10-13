@@ -316,6 +316,7 @@ ol.trace li{margin:0 0 4px}
 <main>
   <div class="top">
     <div>
+      <p class="crumbs"><a href="notes.html">From gates to a compiled if</a> · part 3 of 7 · <a href="../">Programmer Calculator</a> · <a href="https://snowch.github.io/">snowch.github.io</a></p>
       <h1>Bit Lab: how an ALU computes bits and flags</h1>
       <p class="lede">A hands-on lab on bitwise operations, binary arithmetic and the N Z C V condition flags, built from gates you can see.</p>
     </div>
@@ -335,7 +336,7 @@ ol.trace li{margin:0 0 4px}
       <li>The truth tables of NOT, AND, OR and XOR.</li>
       <li>The idea that a CPU register holds a fixed number of bits (here 4 or 8).</li>
     </ul>
-    <p>Three companion pages build the parts this lab uses from those gates, with inputs you can tap: <a href="gates-to-alu.html"><em>From gates to an ALU</em></a> (a full adder, then four of them chained), <a href="adding-to-subtracting.html"><em>From adding to subtracting</em></a> (wrap-around, NOT then add 1, and the borrow as a carry) and <a href="gates-to-register.html"><em>From gates to a register</em></a> (a latch, a clock, a 4-bit register). Read them first if you want the ground under your feet; the background below only summarises them.</p>
+    <p>This is part 3 of <a href="notes.html"><em>From gates to a compiled if</em></a>. Parts 1 and 2, and a side trip, build the parts this lab uses from those gates, with inputs you can tap: <a href="gates-to-alu.html"><em>From gates to an ALU</em></a> (a full adder, then four of them chained), <a href="adding-to-subtracting.html"><em>From adding to subtracting</em></a> (wrap-around, NOT then add 1, and the borrow as a carry) and <a href="gates-to-register.html"><em>From gates to a register</em></a> (a latch, a clock, a 4-bit register). Read them first if you want the ground under your feet; the background below only summarises them.</p>
     <p><strong>Notation.</strong> Gate equations on this page use the usual Boolean shorthand: <code>A ⊕ B</code> is XOR (1 exactly when the inputs differ), <code>A·B</code> or <code>AB</code> is AND, <code>A + B</code> is OR when it appears inside a gate equation, and <code>¬A</code> is NOT. So the full adder's carry-out, <code>A·B + cin·(A ⊕ B)</code>, reads "A and B, or cin and (A xor B)". Everywhere else on the page, + is ordinary addition.</p>
     <div class="check">
       <p>Self-check — if you can answer these without the lab, you're ready:</p>
@@ -400,11 +401,13 @@ ol.trace li{margin:0 0 4px}
     <p><code>CMP</code> followed by <code>BEQ</code> is how <code>if (a == b)</code> runs: the subtraction leaves Z set exactly when the two values were equal, and the branch reads it. In the lab below there is no control unit; you are it. The operation buttons are its output wires.</p>
     <p>The lab below is a miniature ALU: two input registers, the gate network for one operation at a time, a result, and the four flags.</p>
     <p><strong>Two readings of the same bits.</strong> An 8-bit pattern has no intrinsic sign. Read as <em>unsigned</em>, <code>0xFF</code> is 255. Read as <em>two's complement signed</em>, the top bit counts as −128, so <code>0xFF</code> is −1 and the range is −128…127. The hardware adds the same way regardless; the flags let software decide whether the answer is trustworthy under the reading it cares about.</p>
+    <h3>The companion pages, in brief</h3>
     <p><strong>From gates to an ALU.</strong> Bitwise ops use one gate per bit position. Addition uses one <em>full adder</em> per bit position, and a full adder is only five gates: sum = A ⊕ B ⊕ cin and carry-out = A·B + cin·(A ⊕ B). Four of them, each carry-out wired to the next carry-in, add two 4-bit numbers the way you add on paper, and the carry ripples from bit 0 upward. The lab draws each full adder as a box marked <b>FA</b> (short for full adder). To see inside the box, with inputs you can tap and a ripple you can watch, read the companion page <a href="gates-to-alu.html"><em>From gates to an ALU</em></a>.</p>
     <p><strong>From adding to subtracting.</strong> A register with 8 bits holds 256 patterns and wraps round: count down past 0 and you are at 255. So 3 − 5 lands on 254, which is 0xFE, and 0xFE is also the pattern for −2. That is what the lab shows when you pick <code>A − B</code>, and it is not a mistake: the same bits are 254 to one reading and −2 to the other. The adder does it without a subtractor. Inverting every bit of B gives 255 − B, so adding NOT B and then 1 adds 256 − B, which modulo 256 is subtracting B. In the drawing, <code>A − B</code> is the adder with an inverter under every B bit and the first carry-in set to 1. The carry out of the top adder then reports whether a borrow was needed: C = 1 means no borrow. The companion page <a href="adding-to-subtracting.html"><em>From adding to subtracting</em></a> shows this on a 16-position wheel and in bits you can tap.</p>
     <p><strong>Shifts.</strong> The last three operations move bits sideways and need no gates at all, only wiring: each bit's wire is connected one column over. Shifting left moves every bit up a column, which doubles the number, and the bit that falls off the top lands in C. Shifting right halves the number, but there are two right shifts, because the column that empties at the top has to be filled with something. One fills it with 0, which is right for an unsigned number; its traditional name is the <em>logical</em> shift. The other fills it with a copy of the old top bit, so a negative number stays negative, which is right for a signed one; that is the <em>arithmetic</em> shift. The lab's buttons say what each does rather than its name. This is one of the pairs of instructions that exist only because the same bits have two readings; the branches, later on this page, are another. In C, <code>&gt;&gt;</code> on an unsigned variable is the logical shift and on a signed variable is, in practice, the arithmetic one, so again the declaration chooses. Java and JavaScript spell them the other way round from what you might guess: <code>&gt;&gt;</code> is arithmetic and <code>&gt;&gt;&gt;</code> is logical. One more thing to expect: the arithmetic shift rounds toward minus infinity, so −3 shifted right once is −2, not −1.</p>
     <p><strong>From gates to a register.</strong> The ALU needs no memory: a gate's output depends only on its present inputs. The registers on either side of it do, and they are made of the same kinds of gates wired with <em>feedback</em>, an output led back round to an input, so a pair of NOR gates can hold a bit for as long as the power is on. A <em>clock</em>, a signal that swings between 0 and 1 billions of times a second, decides the one instant at which registers take in a new value. The companion page <a href="gates-to-register.html"><em>From gates to a register</em></a> builds a latch from five gates and a 4-bit register you can clock.</p>
-    <p><strong>The flags.</strong> After an operation the ALU records four one-bit facts, which conditional branches then test. They are four separate stored bits, not one four-way value: each flag has its own flip-flop (the memory cell built on the <a href="gates-to-register.html">From gates to a register</a> page), loaded at the same clock edge as the result, and any combination can be set at once. <code>0x80 + 0x80</code> sets C and V together, and <code>0xFF + 1</code> sets Z and C. Real CPUs keep these four bits inside a wider <em>status register</em> next to things like interrupt and mode bits; on ARM it is 32 bits wide with N, Z, C and V as its top four.</p>
+    <h3>The flags</h3>
+<p><strong>The flags.</strong> After an operation the ALU records four one-bit facts, which conditional branches then test. They are four separate stored bits, not one four-way value: each flag has its own flip-flop (the memory cell built on the <a href="gates-to-register.html">From gates to a register</a> page), loaded at the same clock edge as the result, and any combination can be set at once. <code>0x80 + 0x80</code> sets C and V together, and <code>0xFF + 1</code> sets Z and C. Real CPUs keep these four bits inside a wider <em>status register</em> next to things like interrupt and mode bits; on ARM it is 32 bits wide with N, Z, C and V as its top four.</p>
     <table>
       <tr><th>Flag</th><th>Meaning</th><th>Built from</th></tr>
       <tr><td>N</td><td>result is negative when read as signed</td><td>result's top bit, straight through</td></tr>
@@ -435,42 +438,12 @@ ol.trace li{margin:0 0 4px}
   <div class="circuit"><svg id="circuit" xmlns="http://www.w3.org/2000/svg" aria-label="Gate-level circuit"></svg></div>
   <p class="tip">Tap a bit in A or B to flip it. Amber wires carry a 1; red carries are the ripple between adders.</p>
 
-  <p class="tip">Both readings are always shown below. The hardware is just bits and does not know which one you mean; what "as unsigned" and "as signed" in the flag cards rest on is explained after them.</p>
+  <p class="tip">Both readings are always shown below. The hardware is just bits and does not know which one you mean. Which reading a program uses, and how, is the next page: <a href="who-decides.html">Signed or unsigned: who decides?</a></p>
   <div class="values" id="values"></div>
 
   <div class="flags" id="flags"></div>
 
   <section class="why" id="why"></section>
-  <section class="tut" id="readings">
-    <h2>Signed or unsigned: who decides?</h2>
-    <p>Nothing in the circuit above knows whether A is 128 or −128. The register holds eight bits and the adder adds them. Neither has anywhere to store which reading you meant.</p>
-    <p>It does not need to. The ALU produces one result and all four flags on every operation. C and Z answer the unsigned questions and N and V the signed ones, so both readings are available at the same time.</p>
-    <p>The decision is made afterwards, by the next instruction. A compare instruction, <code>CMP</code>, is a subtraction that keeps the flags and throws the result away. After it comes a branch instruction, which tests some of the flags and jumps if the test passes. The instruction set has two branches for every question: one tests the unsigned flags and one tests the signed flags. Whoever writes the program, or the compiler working for them, picks which one to use. That is who decides.</p>
-    <p>Try it below. The lab's current A and B are fed through <code>CMP A, B</code>, and the snippet ends with <code>BEQ</code>, the one branch both readings share. The tables underneath list the other branches: what each one means, which flags it tests, whether it would be taken right now, and whether that matches the arithmetic under its reading. Change A or B in the lab above, or load a pair here.</p>
-    <div class="row asmPresets" id="asmPresets"></div>
-    <pre class="work" id="asmCode"></pre>
-    <div class="row"><button class="small" type="button" id="asmWorkBtn" aria-pressed="false">show the working</button><span>how A − B was computed, bit by bit (explained on <a href="adding-to-subtracting.html">From adding to subtracting</a>)</span></div>
-    <div class="hood" id="asmWork" hidden></div>
-    <div class="asmwrap">
-      <div><h3>Unsigned reading</h3><div id="asmU"></div></div>
-      <div><h3>Signed reading</h3><div id="asmS"></div></div>
-    </div>
-    <p class="tip">ARM mnemonics. x86 has the same pairs under other names: <code>jb</code>/<code>jae</code>/<code>ja</code>/<code>jbe</code> for unsigned and <code>jl</code>/<code>jge</code>/<code>jg</code>/<code>jle</code> for signed, except that x86 sets its carry flag to 1 when a borrow was needed, the opposite of ARM.</p>
-    <h3>The same thing as a program</h3>
-    <p>Here is the same comparison as code: one <code>if</code> in C, and the ARM assembly a compiler turns it into. Pick which type <code>a</code> and <code>b</code> are declared as. The only C line that changes is the declaration, yet the compiler emits a different load and a different branch, because the type tells it which member of each pair to use. The lines that actually run for the lab's current A and B are highlighted, and the trace underneath walks through them.</p>
-    <div class="row asmPresets"></div>
-    <div class="row"><span>Declared as</span><button class="small asmType" type="button" id="asmTypeU" data-s="0" aria-pressed="true">uint8_t (unsigned)</button><button class="small asmType" type="button" id="asmTypeS" data-s="1" aria-pressed="false">int8_t (signed)</button></div>
-    <div class="asmwrap">
-      <div><h3>C</h3><pre class="work asmprog" id="asmC"></pre></div>
-      <div><h3>ARM assembly</h3><pre class="work asmprog" id="asmArm"></pre></div>
-    </div>
-    <ol class="trace" id="asmTrace"></ol>
-    <h3>What the loads do to the bits</h3>
-    <p>The two loads differ only in the 24 bits that were never in memory. On ARM every register is 32 bits wide and <code>CMP</code> compares whole registers, so a byte has to be widened on its way in: <code>LDRB</code> fills the spare bits with 0 and <code>LDRSB</code> fills them with copies of the byte's top bit, which is why the same byte 0x80 becomes 128 under one and −128 under the other, and why the two loads agree whenever the top bit is 0. The companion page <a href="bytes-to-registers.html"><em>From bytes to registers</em></a> draws both loads and the widened compare cell by cell, for any pair you choose, and explains why the 32-bit flags can differ from the lab's 8-bit ones while the branch lands the same way.</p>
-    <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. (A load is widening whenever the register is wider than the value in memory, which is every byte load on a 32-bit machine: the spare bits have to be filled with something, and the two loads fill them differently, as the program above shows.) A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
-    <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Load <code>0x80 vs 0x7F</code> above and watch the two readings order the same bits oppositely.</p>
-    <p>To make this automatic, the <a href="flag-drills.html">flag drills</a> page gives randomised predict-then-check exercises on exactly these four things: the flags of a <code>CMP</code>, which branches fire, recovering the type from a compiled <code>if</code>, and widening a byte by hand.</p>
-  </section>
 
   <section class="presets">
     <h2>Try these</h2>
@@ -707,7 +680,9 @@ ol.trace li{margin:0 0 4px}
     </ul>
   </section>
 
+  <nav class="pager" aria-label="Series navigation"><a class="prev" href="adding-to-subtracting.html">Previous: From adding to subtracting</a><a class="up" href="notes.html">Contents</a><a class="next" href="who-decides.html">Next: Signed or unsigned: who decides?</a></nav>
   <footer class="site">
+    <a href="notes.html">From gates to a compiled if: contents</a>
     <a href="../">Programmer Calculator app</a>
     <a href="twos-complement.pdf">Two's complement tutorial (PDF)</a>
   </footer>
@@ -1163,138 +1138,6 @@ document.querySelectorAll('[data-ex]').forEach(b=>b.addEventListener('click',()=
   document.getElementById('lab').scrollIntoView({behavior:'smooth'});
 }));
 
-/* ---------- CMP and the branches ---------- */
-function cmpFlags(a,b,w){
-  const M=mask(w), xb=(~b)&M; let c=1, res=0;
-  for(let i=0;i<w;i++){ const x=bit(a,i), y=bit(xb,i), s=x^y^c; res|=s<<i; const cn=(x&y)|(c&(x^y)); if(i===w-1){ const vin=c; c=cn; return {res, n:bit(res,w-1), z:res===0?1:0, c, v:c^vin}; } c=cn; }
-}
-const ASM_PRESETS=[
-  ['5 vs 3', 5, 3], ['3 vs 5', 3, 5], ['0x80 vs 0x7F', 0x80, 0x7F], ['0xFF vs 0x01', 0xFF, 0x01], ['0x7F vs 0x7F', 0x7F, 0x7F],
-];
-(function(){
-  document.querySelectorAll('.asmPresets').forEach(host=>{
-  const cap=document.createElement('span'); cap.textContent='Load a pair'; host.appendChild(cap);
-  for(const [t,a,b] of ASM_PRESETS){
-    const btn=document.createElement('button'); btn.className='small'; btn.type='button'; btn.textContent=t;
-    btn.addEventListener('click',()=>{ state.op='SUB'; state.w=8; state.a=a; state.b=b; update(); });
-    host.appendChild(btn);
-  }
-  });
-})();
-function renderAsm(r){
-  const code=document.getElementById('asmCode'); if(!code) return;
-  const w=state.w, M=mask(w), a=state.a&M, b=state.b&M, f=cmpFlags(a,b,w);
-  const ua=a, ub=b, sa=signed(a,w), sb=signed(b,w);
-  const yn=x=>x?'1':'0';
-  code.textContent=
-`    CMP  A, B        ; flags <- A - B, result discarded
-    ; A = ${hex(a,w)} = ${ua} unsigned, ${sa} signed
-    ; B = ${hex(b,w)} = ${ub} unsigned, ${sb} signed
-    ; A - B = ${hex(f.res,w)}   N=${yn(f.n)} Z=${yn(f.z)} C=${yn(f.c)} V=${yn(f.v)}
-    BEQ  same        ; jump to "same" if Z = 1. Z = ${yn(f.z)}: ${f.z?"taken":"not taken"}
-    ...              ; ${f.z?"skipped: execution continues at the label":"runs next, because the branch fell through"}`;
-  const rows=(list,host)=>{
-    let h='<table class="truth asm"><tr><th>branch</th><th>means</th><th>tests</th><th>taken?</th><th>arithmetic</th></tr>';
-    for(const [mn,meaning,test,taken,truth] of list){
-      h+=`<tr class="${taken?'take':''}"><td class="mn">${mn}</td><td class="k">${meaning}</td><td class="k">${test}</td><td>${taken?'taken':'not taken'}</td><td class="k">${truth?'true':'false'} ${taken===truth?'✓':'✗'}</td></tr>`;
-    }
-    document.getElementById(host).innerHTML=h+'</table>';
-  };
-  const N=f.n,Z=f.z,C=f.c,V=f.v;
-  rows([
-    ['BLO','A &lt; B','C = 0', C===0, ua<ub],
-    ['BHS','A ≥ B','C = 1', C===1, ua>=ub],
-    ['BHI','A &gt; B','C = 1 and Z = 0', C===1&&Z===0, ua>ub],
-    ['BLS','A ≤ B','C = 0 or Z = 1', C===0||Z===1, ua<=ub],
-    ['BEQ','A = B','Z = 1', Z===1, ua===ub],
-    ['BNE','A ≠ B','Z = 0', Z===0, ua!==ub],
-  ],'asmU');
-  rows([
-    ['BLT','A &lt; B','N ≠ V', N!==V, sa<sb],
-    ['BGE','A ≥ B','N = V', N===V, sa>=sb],
-    ['BGT','A &gt; B','Z = 0 and N = V', Z===0&&N===V, sa>sb],
-    ['BLE','A ≤ B','Z = 1 or N ≠ V', Z===1||N!==V, sa<=sb],
-    ['BEQ','A = B','Z = 1', Z===1, sa===sb],
-    ['BNE','A ≠ B','Z = 0', Z===0, sa!==sb],
-  ],'asmS');
-  renderAsmProg(f,a,b,w);
-}
-
-/* ---------- the same thing as a program ---------- */
-let asmSigned=false;
-function renderAsmProg(f,a,b,w){
-  const cH=document.getElementById('asmC'), aH=document.getElementById('asmArm'), tH=document.getElementById('asmTrace');
-  if(!cH||!aH||!tH) return;
-  const S=asmSigned, va=S?signed(a,w):a, vb=S?signed(b,w):b, less=va<vb;
-  const N=f.n,Z=f.z,C=f.c,V=f.v, yn=x=>x?'1':'0';
-  let taken;
-  const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const ln=(run,code,cm)=>`<span class="ln${run?' run':''}">${esc(code.padEnd(21))}${cm?'<span class="cm">'+esc(cm)+'</span>':''}</span>`;
-  const ty=S?'int8_t ':'uint8_t';
-  const note=w!==8?[ln(false,'',`// lab is ${w} bits wide; C's smallest types are 8, so read these as ${w}-bit`)]:[];
-  cH.innerHTML=[...note,
-    ln(true, `${ty} a = ${hex(a,w)};`, `// ${va}`),
-    ln(true, `${ty} b = ${hex(b,w)};`, `// ${vb}`),
-    ln(true, `int r;`),
-    ln(true, `if (a < b)`, `// ${va} < ${vb} is ${less}`),
-    ln(less, `    r = 1;`, less?`// r = 1`:''),
-    ln(!less,`else`),
-    ln(!less,`    r = 0;`, !less?`// r = 0`:''),
-  ].join('');
-  const ldr=S?'LDRSB':'LDRB ', br=S?'BLT  ':'BLO  ';
-  const ext=x=>S?((bit(x,w-1)?(x|((~0)<<w)):x)>>>0):x, a32=ext(a), b32=ext(b), r32=(a32-b32)>>>0;
-  const ext8=x=>((bit(x,w-1)?(x|((~0)<<w)):x)>>>0);
-  const h32=x=>'0x'+x.toString(16).toUpperCase().padStart(8,'0');
-  const N32=r32>>>31, Z32=r32===0?1:0, C32=a32>=b32?1:0, V32=((a32^b32)&(a32^r32))>>>31;
-  const taken32=S?(N32!==V32):(C32===0);
-  const same=N32===N&&Z32===Z&&C32===C&&V32===V;
-  const sv=x=>x>>>31?x-4294967296:x;
-  const test=S?`N ≠ V`:`C = 0`; taken=taken32;
-  const now=S?`${yn(N32)} ${N32!==V32?'≠':'='} ${yn(V32)}`:`C=${yn(C32)}`;
-  aH.innerHTML=[
-    ln(true, `      ${ldr} R1, [a]`, `; R1 = ${h32(a32)}, ${S?'sign':'zero'}-extended`),
-    ln(true, `      ${ldr} R2, [b]`, `; R2 = ${h32(b32)}`),
-    ln(true, `      CMP   R1, R2`, `; 32-bit: N=${yn(N32)} Z=${yn(Z32)} C=${yn(C32)} V=${yn(V32)}`),
-    ln(true, `      ${br} less`, `; taken if ${test} (${now}: ${taken?'yes':'no'})`),
-    ln(!taken,`      MOV   R0, #0`, !taken?`; r = 0`:''),
-    ln(!taken,`      B     done`),
-    ln(taken, `less: MOV   R0, #1`, taken?`; r = 1`:''),
-    ln(true, `done:`, `; r = ${taken?1:0}`),
-  ].join('');
-  const ok=taken===less;
-  tH.innerHTML=[
-    `<li><code>${ldr.trim()}</code> copies the ${w}-bit value ${hex(a,w)} into R1, a 32-bit register. Only the bottom ${w} bits come from memory, so the load has to fill in the other ${32-w}, and that is why there are two load instructions (drawn bit by bit on <a href="bytes-to-registers.html">From bytes to registers</a>). `+
-      (S?`<code>LDRSB</code> copies the top bit into them (sign extension), giving ${h32(a32)}, which is ${sv(a32)} in 32 bits. <code>LDRB</code> would have filled them with zeros, giving ${h32(a)}, which is ${a}.`
-        :`<code>LDRB</code> fills them with zeros (zero extension), giving ${h32(a32)}, which is ${a32}. <code>LDRSB</code> would have copied the top bit into them, giving ${h32(ext8(a))}, which is ${sv(ext8(a))}.`)+
-      ` The <code>${ty.trim()}</code> declaration told the compiler which to use, so the reading is settled before <code>CMP</code> runs.`+
-      ((!bit(a,w-1)&&!bit(b,w-1))?` <strong>Switching the declaration changes nothing for this pair</strong>: both top bits are 0, and copying a 0 is the same as filling with 0. The two loads only differ when a top bit is 1. Load <code>0x80 vs 0x7F</code> or <code>0xFF vs 0x01</code> above and switch again.`:'')+`</li>`,
-    `<li><code>CMP R1, R2</code> subtracts the widened values, ${h32(a32)} − ${h32(b32)} = ${h32(r32)}, and stores N=${yn(N32)} Z=${yn(Z32)} C=${yn(C32)} V=${yn(V32)}. The result itself is thrown away. `+
-      (same?`These are the lab\'s ${w}-bit flags too.`:`These are not the lab\'s ${w}-bit flags (N=${yn(N)} Z=${yn(Z)} C=${yn(C)} V=${yn(V)}): N and V describe the result at the width of the subtraction, which is now 32 bits. The branch still gets the same answer, because widening kept the values in the same order.`)+`</li>`,
-    `<li><code>${br.trim()} less</code> tests ${test}. ${S?`N is ${yn(N32)} and V is ${yn(V32)}`:`C is ${yn(C32)}`}, so the branch is <strong>${taken?'taken: execution jumps to <code>less</code>':'not taken: execution falls through to the next line'}</strong>.</li>`,
-    `<li><code>MOV R0, #${taken?1:0}</code> sets r = ${taken?1:0}. In C, ${va} &lt; ${vb} is ${less}, so the program ${ok?'agrees ✓':'disagrees ✗'}.</li>`,
-  ].join('');
-  renderCmpWork(a,b,w);
-  document.querySelectorAll('button.asmType').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.s==='1')===S?'true':'false'));
-}
-document.querySelectorAll('button.asmType').forEach(b=>b.addEventListener('click',()=>{ asmSigned=b.dataset.s==='1'; update(); }));
-
-/* ---------- CMP snippet: show the working ---------- */
-function renderCmpWork(a,b,w){
-  const host=document.getElementById('asmWork'); if(!host||host.hidden) return;
-  const M=mask(w), nb=(~b)&M; const cin=[1]; let res=0;
-  for(let i=0;i<w;i++){ const x=bit(a,i), y=bit(nb,i), c=cin[i]; res|=(x^y^c)<<i; cin[i+1]=(x&y)|(c&(x^y)); }
-  const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`, gap=i=>(i%8===0&&i!==0)?' gap':'';
-  const row=(label,x,opts={})=>{ let h=`<div class="hrow"><span class="hl">${label}</span>`+cell('','blank'); for(let i=w-1;i>=0;i--){ const v=bit(x,i); h+=cell(v,((v?'on':'')+gap(i)+(opts.top&&i===w-1?' top':'')).trim()); } return h+`<span class="hv">${opts.val||''}</span></div>`; };
-  let idx=`<div class="hrow"><span class="hl">bit</span>`+cell('','blank'); for(let i=w-1;i>=0;i--) idx+=cell((i%8===7||i%8===0||i===w-1)?i:'','c'+gap(i)); idx+='<span class="hv"></span></div>';
-  let car=`<div class="hrow"><span class="hl">carries</span>`+cell(cin[w],'c'+(cin[w]?' on':'')+' v'); for(let i=w-1;i>=0;i--) car+=cell(cin[i],('c'+(cin[i]?' on':'')+(i===w-1?' v':'')+gap(i)).trim()); car+='<span class="hv">bit 0 gets the + 1</span></div>';
-  const N=bit(res,w-1), Z=res===0?1:0, C=cin[w], V=cin[w]^cin[w-1];
-  host.innerHTML=`<p class="hnote" style="margin-top:4px">The ALU has no subtractor. It adds A to NOT B (every bit of B flipped) with a 1 fed into the first carry-in, which is A + (${M} − B) + 1 = A − B + ${M+1}; the +${M+1} is the carry that falls off the top, if there is one.</p>`+
-    idx+car+row('A',a,{val:`${hex(a,w)} = ${a}`})+row('NOT B',nb,{val:`${hex(nb,w)}  (B = ${hex(b,w)})`})+row('= A − B',res,{top:true,val:`${hex(res,w)} = ${res} unsigned, ${signed(res,w)} signed`})+
-    `<div class="hflags"><span><b>N</b> = top bit = <b>${N}</b></span><span><b>Z</b> = all zero? <b>${Z}</b></span><span><b>C</b> = carry out = <b>${C}</b>${C?', no borrow':', a borrow'}</span><span><b>V</b> = carry in ≠ carry out at bit ${w-1} = <b>${V}</b></span></div>`;
-}
-(function(){ const btn=document.getElementById('asmWorkBtn'), box=document.getElementById('asmWork'); if(!btn||!box) return;
-  btn.addEventListener('click',()=>{ box.hidden=!box.hidden; btn.setAttribute('aria-pressed',box.hidden?'false':'true'); btn.textContent=box.hidden?'show the working':'hide the working'; update(); }); })();
-
 window.addEventListener('resize',()=>{ clearTimeout(window.__bitlabResize); window.__bitlabResize=setTimeout(update,120); });
 /* ---------- theme ---------- */
 (function(){
@@ -1486,7 +1329,7 @@ renderReg();
 
 function update(){
   const r=compute();
-  renderOps(); renderCircuit(r); renderValues(r); renderFlags(r); renderWhy(r); renderAsm(r);
+  renderOps(); renderCircuit(r); renderValues(r); renderFlags(r); renderWhy(r);
   persist();
 }
 update();

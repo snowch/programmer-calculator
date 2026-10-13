@@ -312,17 +312,26 @@ ol.trace li{margin:0 0 4px}
 .hnote{color:var(--ink-2);font:.82rem/1.5 var(--sans);margin:6px 0 10px;white-space:normal}
 .hnote code{background:var(--paper);padding:1px 5px;border-radius:4px}
 
+
 .crumbs{font:.84rem var(--mono);color:var(--ink-2);margin:0 0 14px}
 .crumbs a{color:var(--ink-2)}
 .crumbs a:hover{color:var(--ink)}
 .tut.first{margin-top:0;border-top:0;padding-top:0}
+nav.pager{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:34px 0 0;padding:14px 0;border-top:1px solid var(--rule);font:.9rem var(--sans)}
+nav.pager a{color:var(--ink);text-decoration:none;border:1px solid var(--rule);border-radius:8px;padding:8px 12px}
+nav.pager a:hover{border-color:var(--ink-2)}
+nav.pager .next{text-align:right}
+nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
+@media (max-width:640px){nav.pager{grid-template-columns:1fr}nav.pager .next{text-align:left}}
+
+
 </style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <p class="crumbs"><a href="../">Programmer Calculator</a> · <a href="bit-lab.html">Bit Lab</a> · <a href="https://snowch.github.io/">snowch.github.io</a></p>
+      <p class="crumbs"><a href="notes.html">From gates to a compiled if</a> · part 1 of 7 · <a href="../">Programmer Calculator</a> · <a href="https://snowch.github.io/">snowch.github.io</a></p>
       <h1>From gates to an ALU</h1>
       <p class="lede">One full adder from five gates, four of them chained into a 4-bit adder, and why the carry ripples.</p>
     </div>
@@ -368,8 +377,9 @@ ol.trace li{margin:0 0 4px}
     </ul>
   </section>
 
+  <nav class="pager" aria-label="Series navigation"><span></span><a class="up" href="notes.html">Contents</a><a class="next" href="adding-to-subtracting.html">Next: From adding to subtracting</a></nav>
   <footer class="site">
-    <a href="bit-lab.html">Bit Lab: gates, bits and flags</a>
+    <a href="notes.html">From gates to a compiled if: contents</a>
     <a href="../">Programmer Calculator app</a>
     <a href="twos-complement.pdf">Two's complement tutorial (PDF)</a>
   </footer>
@@ -377,6 +387,22 @@ ol.trace li{margin:0 0 4px}
 <script>
 (function(){
 'use strict';
+/* ---------- theme ---------- */
+(function(){
+  const btn=document.getElementById('themeBtn'); if(!btn) return;
+  const THEMES=['auto','light','dark'];
+  let theme='auto'; try{ theme=localStorage.getItem('bitlab-theme')||'auto'; }catch(e){}
+  if(!THEMES.includes(theme)) theme='auto';
+  const apply=()=>{
+    if(theme==='auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme',theme);
+    btn.textContent='theme: '+theme; btn.setAttribute('aria-label','Theme: '+theme+'. Activate to change');
+  };
+  apply();
+  btn.addEventListener('click',()=>{ theme=THEMES[(THEMES.indexOf(theme)+1)%THEMES.length]; try{localStorage.setItem('bitlab-theme',theme);}catch(e){} apply(); });
+})();
+
+
 /* ---------- SVG helpers ---------- */
 const NS='http://www.w3.org/2000/svg';
 function el(tag, attrs, parent){
@@ -427,23 +453,6 @@ function bitCell(parent, x, y, val, label, editable, onToggle){
   }
   return g;
 }
-
-
-/* ---------- theme ---------- */
-(function(){
-  const btn=document.getElementById('themeBtn'); if(!btn) return;
-  const THEMES=['auto','light','dark'];
-  let theme='auto'; try{ theme=localStorage.getItem('bitlab-theme')||'auto'; }catch(e){}
-  if(!THEMES.includes(theme)) theme='auto';
-  const apply=()=>{
-    if(theme==='auto') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme',theme);
-    btn.textContent='theme: '+theme; btn.setAttribute('aria-label','Theme: '+theme+'. Activate to change');
-  };
-  apply();
-  btn.addEventListener('click',()=>{ theme=THEMES[(THEMES.indexOf(theme)+1)%THEMES.length]; try{localStorage.setItem('bitlab-theme',theme);}catch(e){} apply(); });
-})();
-
 
 /* ---------- one full adder, gate by gate ---------- */
 function drawFullAdder(host,a,b,c,onToggle){

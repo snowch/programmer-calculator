@@ -312,20 +312,29 @@ ol.trace li{margin:0 0 4px}
 .hnote{color:var(--ink-2);font:.82rem/1.5 var(--sans);margin:6px 0 10px;white-space:normal}
 .hnote code{background:var(--paper);padding:1px 5px;border-radius:4px}
 
+
 .crumbs{font:.84rem var(--mono);color:var(--ink-2);margin:0 0 14px}
 .crumbs a{color:var(--ink-2)}
 .crumbs a:hover{color:var(--ink)}
 .tut.first{margin-top:0;border-top:0;padding-top:0}
+nav.pager{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:34px 0 0;padding:14px 0;border-top:1px solid var(--rule);font:.9rem var(--sans)}
+nav.pager a{color:var(--ink);text-decoration:none;border:1px solid var(--rule);border-radius:8px;padding:8px 12px}
+nav.pager a:hover{border-color:var(--ink-2)}
+nav.pager .next{text-align:right}
+nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
+@media (max-width:640px){nav.pager{grid-template-columns:1fr}nav.pager .next{text-align:left}}
+
 .hb.tap{cursor:pointer}
 .hb.tap:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 #pair .hrow .hl{width:40px}
+
 </style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <p class="crumbs"><a href="../">Programmer Calculator</a> · <a href="bit-lab.html">Bit Lab</a> · <a href="https://snowch.github.io/">snowch.github.io</a></p>
+      <p class="crumbs"><a href="notes.html">From gates to a compiled if</a> · part 5 of 7 · <a href="../">Programmer Calculator</a> · <a href="https://snowch.github.io/">snowch.github.io</a></p>
       <h1>From bytes to registers</h1>
       <p class="lede">Why a byte has to be widened before a 32-bit processor can compare it, what the two loads write into the bits that were never in memory, and how the widened compare gets its flags. Drawn cell by cell, for any pair of bytes.</p>
     </div>
@@ -375,18 +384,18 @@ ol.trace li{margin:0 0 4px}
   <section class="tut" id="next">
     <h2>Where this leads</h2>
     <ul>
-      <li>The <a href="bit-lab.html#readings">Bit Lab's <em>Signed or unsigned: who decides?</em></a> section puts these loads in a program: an <code>if</code> in C beside the ARM a compiler emits, with the lines that run highlighted and a trace.</li>
+      <li>The <a href="who-decides.html"><em>Signed or unsigned: who decides?</em></a> section puts these loads in a program: an <code>if</code> in C beside the ARM a compiler emits, with the lines that run highlighted and a trace.</li>
       <li>The <a href="flag-drills.html#d4">flag drills</a> ask you to widen a byte by hand, then draw these rows for your answer.</li>
       <li>The <a href="adding-to-subtracting.html">From adding to subtracting</a> page is the compare's other half: why A + NOT B + 1 subtracts, and why the carry out reports the borrow.</li>
       <li>The <a href="twos-complement.pdf">two's complement tutorial</a> (PDF) covers sign extension alongside the rest of the arithmetic.</li>
     </ul>
   </section>
 
+  <nav class="pager" aria-label="Series navigation"><a class="prev" href="who-decides.html">Previous: Signed or unsigned: who decides?</a><a class="up" href="notes.html">Contents</a><a class="next" href="flag-drills.html">Next: Flag drills</a></nav>
   <footer class="site">
-    <a href="adding-to-subtracting.html">From adding to subtracting</a>
-    <a href="bit-lab.html">Bit Lab: gates, bits and flags</a>
-    <a href="flag-drills.html">Flag drills</a>
+    <a href="notes.html">From gates to a compiled if: contents</a>
     <a href="../">Programmer Calculator app</a>
+    <a href="twos-complement.pdf">Two's complement tutorial (PDF)</a>
   </footer>
 </main>
 <script>
