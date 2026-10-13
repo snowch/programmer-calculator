@@ -358,14 +358,15 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
     <p>A register cell is a flip-flop, and a flip-flop is always holding a 0 or a 1. There is no third state meaning "empty" or "not in use". So when an 8-bit value goes into a 32-bit register, the other 24 cells will contain <em>something</em> whether anyone chooses it or not, and the only question is whether what they contain changes the number. The two loads are the two fills that do not.</p>
     <h3>Why the fill does not change the number</h3>
     <p>For an unsigned number the fill is zeros, and leading zeros are worth nothing: 0005 is 5. Bits 8 to 31 have place values 256 up to 2<sup>31</sup>, and a 0 in each contributes 0, so the register reads exactly what the byte read.</p>
-    <p>For a signed number the fill is copies of the top bit, and the reason that works is easiest to see from −1. In two's complement, −1 is all ones at every width: 0xFF as a byte, 0xFFFFFFFF as a 32-bit word. Every other negative number is −1 with a few of its low bits cleared, so it is a run of leading ones followed by the bits that make it specific. Leading ones are to a negative number what leading zeros are to a positive one: you can add as many as you like without changing the value. Copying the top bit upward adds exactly those.</p>
+    <p>For a signed number the fill is copies of the top bit, and the reason comes straight from the wheel on the <a href="adding-to-subtracting.html">subtraction page</a>. A negative number is a count back from zero. On the 8-bit wheel, −2 is two steps back from 0x00, which lands on 0x100 − 2 = 0xFE. On the 32-bit wheel, −2 is two steps back from 0x00000000, which lands on 0x100000000 − 2 = 0xFFFFFFFE. The steps are the same; only the size of the wheel changed. So the two patterns differ by exactly the difference in wheel sizes, 0x100000000 − 0x100 = 0xFFFFFF00, and that number is 24 ones followed by 8 zeros. The 32-bit pattern of any negative byte is therefore the 8-bit pattern with 24 ones stacked on top, and nothing else. A positive byte is not a count back from anything, so it gets no wheel-size term and its 24 extra bits are zeros. The byte's top bit tells you which case you are in, which is why copying it is the whole rule.</p>
+    <p>The place values say the same thing in one line. In the byte, bit 7 is worth −128. In the 32-bit word, bit 7 is worth +128 and bits 8 to 31, all set, are worth −256 between them: +128 − 256 = −128, unchanged. Fill those 24 bits with zeros instead and bit 7 quietly becomes +128, which is exactly why 0x80 through <code>LDRB</code> reads as 128 and through <code>LDRSB</code> as −128.</p>
     <table class="truth" style="margin:4px 0 10px">
-      <tr><th>value</th><th>as a byte</th><th>as a 32-bit word</th><th>what the fill added</th></tr>
-      <tr><td>5</td><td>0x05</td><td>0x00000005</td><td>leading zeros</td></tr>
-      <tr><td>127</td><td>0x7F</td><td>0x0000007F</td><td>leading zeros</td></tr>
-      <tr><td>−1</td><td>0xFF</td><td>0xFFFFFFFF</td><td>leading ones</td></tr>
-      <tr><td>−2</td><td>0xFE</td><td>0xFFFFFFFE</td><td>leading ones</td></tr>
-      <tr><td>−128</td><td>0x80</td><td>0xFFFFFF80</td><td>leading ones</td></tr>
+      <tr><th>value</th><th>as a byte</th><th>as a 32-bit word</th><th>the 24 bits the load added</th></tr>
+      <tr><td>5</td><td>0x05</td><td>0x00000005</td><td>zeros</td></tr>
+      <tr><td>127</td><td>0x7F</td><td>0x0000007F</td><td>zeros</td></tr>
+      <tr><td>−1</td><td>0xFF</td><td>0xFFFFFFFF</td><td>ones, 0xFFFFFF00</td></tr>
+      <tr><td>−2</td><td>0xFE</td><td>0xFFFFFFFE</td><td>ones, 0xFFFFFF00</td></tr>
+      <tr><td>−128</td><td>0x80</td><td>0xFFFFFF80</td><td>ones, 0xFFFFFF00</td></tr>
     </table>
     <p>The <a href="adding-to-subtracting.html">wheel</a> says the same thing another way. On the 256-position wheel, −128 is 128 steps back from 0, which lands on 0x80. On a wheel with 2<sup>32</sup> positions, 128 steps back from 0 lands on 0xFFFFFF80. Sign extension moves a number from the small wheel to the same place on the big one.</p>
     <p>So both loads produce "the same number, now with room to spare". They disagree only about which number the byte was, 128 or −128, and that is the whole disagreement.</p>
