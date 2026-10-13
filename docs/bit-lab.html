@@ -468,7 +468,9 @@ ol.trace li{margin:0 0 4px}
     <h3>Under the hood</h3>
     <p>The same two instructions, bit by bit. First the load, then the compare.</p>
     <p>Why does a load have to turn a byte into a 32-bit value at all? Because the register is the only place the processor can compute, and on ARM every register is 32 bits wide. Memory is addressed in bytes, so a <code>uint8_t</code> or <code>int8_t</code> occupies one byte there. But <code>CMP</code>, like every ALU instruction, works on whole registers, and there is no 8-bit compare to use instead. So the byte must become a 32-bit value on its way in, and something has to be chosen for the 24 bits that were never in memory. A true 8-bit processor, with 8-bit registers, would do no widening at all, and its flags would match the lab's exactly.</p>
-    <p>So: first the load, which widens the byte, then the compare, which is the lab's subtraction with 32 columns instead of the lab's four or eight. Switch the declaration above and watch which cells change; if nothing changes, the panel says why.</p>
+    <p>Here is one byte put through both loads, with the registers they leave behind, and then a byte on which the two loads agree.</p>
+    <div class="hood" id="hoodFixed"></div>
+    <p>The live panel below does the same for the pair loaded in the lab, under the declaration you choose, and then carries on into the compare. First the load, which widens the byte, then the compare, which is the lab's subtraction with 32 columns instead of the lab's four or eight. Switch the declaration above and watch which cells change; if nothing changes, the panel says why.</p>
     <div class="row asmPresets"></div>
     <div class="row"><span>Declared as</span><button class="small asmType" type="button" data-s="0" aria-pressed="true">uint8_t (unsigned)</button><button class="small asmType" type="button" data-s="1" aria-pressed="false">int8_t (signed)</button></div>
     <div class="hood" id="hood"></div>
@@ -1344,6 +1346,17 @@ function renderCmpWork(a,b,w){
   btn.addEventListener('click',()=>{ box.hidden=!box.hidden; btn.setAttribute('aria-pressed',box.hidden?'false':'true'); btn.textContent=box.hidden?'show the working':'hide the working'; update(); }); })();
 
 window.addEventListener('resize',()=>{ clearTimeout(window.__bitlabResize); window.__bitlabResize=setTimeout(update,120); });
+/* ---------- under the hood: fixed comparison of the two loads ---------- */
+(function(){
+  const host=document.getElementById('hoodFixed'); if(!host) return;
+  const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`, gap=i=>(i%8===0&&i!==0)?' gap':'';
+  const h32=x=>'0x'+(x>>>0).toString(16).toUpperCase().padStart(8,'0'), sv=x=>x>>>31?x-4294967296:x;
+  const row=(label,x,opts={})=>{ let h=`<div class="hrow"><span class="hl">${label}</span>`+cell('','blank'); for(let i=31;i>=0;i--){ const v=bit(x,i); let cls=(v?'on':'')+gap(i); if(opts.blank&&i>=8) cls=' blank'+gap(i); else if(opts.fill&&i>=8) cls+=' fill'; if(opts.mark&&i===7) cls+=' top'; h+=cell(v,cls.trim()); } return h+`<span class="hv">${opts.val||''}</span></div>`; };
+  let idx=`<div class="hrow"><span class="hl">bit</span>`+cell('','blank'); for(let i=31;i>=0;i--) idx+=cell((i%8===7||i%8===0)?i:'','c'+gap(i)); idx+='<span class="hv"></span></div>';
+  const one=(v,title)=>{ const z=v, s=(bit(v,7)?(v|0xFFFFFF00):v)>>>0; return `<h4>${title}</h4>`+idx+row('byte in memory',v,{blank:true,mark:true,val:`0x${v.toString(16).toUpperCase().padStart(2,'0')}, top bit ${bit(v,7)}`})+row('LDRB: fill with 0',z,{fill:true,val:`${h32(z)} = ${z}`})+row('LDRSB: copy bit 7',s,{fill:true,val:`${h32(s)} = ${sv(s)}`}); };
+  host.innerHTML=one(0x80,'One byte, both loads: 0x80')+`<p class="hnote">The byte is the same eight cells in both rows. Only the 24 dashed cells differ, and they differ because the two loads fill them by different rules: LDRB always writes 0, LDRSB writes whatever bit 7 was, here a 1. The first register reads as 128, the second as −128. That is the whole difference between a <code>uint8_t</code> and an <code>int8_t</code> once it is in a register.</p>`+
+    one(0x05,'The same two loads on 0x05')+`<p class="hnote">Bit 7 is 0, so copying it writes zeros, exactly what LDRB writes. Both loads give 0x00000005 and the declaration makes no difference to the bits. The two loads only disagree when the top bit is 1, which is why pairs with a top bit set are the ones worth loading below.</p>`;
+})();
 /* ---------- theme ---------- */
 (function(){
   const btn=document.getElementById('themeBtn'); if(!btn) return;
