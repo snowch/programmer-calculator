@@ -395,9 +395,9 @@ pre.work.prompt{min-height:2.6em;font-size:1rem}
 
   <section class="tut drill" id="d2">
     <h2>2. Write a value as a pattern</h2>
-    <p>The other direction, in the two steps you would do on paper. First the wheel: a negative value is a count back from zero, so find the unsigned number on the same spoke, 16 − 3 = 13 for −3. Then the bits: build that unsigned number from place values. The reveal cross-checks it with invert-and-add-1.</p>
+    <p>The other direction, in the two steps you would do on paper. First the wheel: a negative value is a count back from zero, so find the unsigned number on the same spoke, written in ordinary decimal: 16 − 3 = 13 for −3. Then the bits: build that unsigned number from place values by tapping cells. The reveal cross-checks it with invert-and-add-1.</p>
     <pre class="work prompt"></pre>
-    <div class="row answers"><label class="ans"><span>Step 1: same spoke as unsigned</span><input class="uin" type="text" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="0"></label><button class="small check1" type="button">Check step 1</button></div>
+    <div class="row answers"><label class="ans"><span>Step 1: the unsigned number on the same spoke, in decimal</span><input class="uin" type="text" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="e.g. 13"></label><button class="small check1" type="button">Check step 1</button></div>
     <div class="stage1fb"></div>
     <div class="stage2" hidden>
       <div class="hood cells"></div>
@@ -533,9 +533,10 @@ function wheelSvg(a,b,opts={}){
   cells.addEventListener('click',e=>{ const t=e.target.closest('.hb.tap'); if(!t) return; typed^=1<<Number(t.dataset.i); drawCells(); });
   cells.addEventListener('keydown',e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const t=e.target.closest&&e.target.closest('.hb.tap'); if(!t) return; e.preventDefault(); typed^=1<<Number(t.dataset.i); drawCells(); });
   const next=()=>{ const w=state.w, half=1<<(w-1); v=Math.random()<0.75?-(1+rnd(half)):rnd(half); done=false; typed=0; inU.value=''; fb.innerHTML=''; stage1fb.innerHTML=''; stage2.hidden=true; prompt.textContent=`${v}  (signed, ${w} bits)`; };
-  host.querySelector('.check1').addEventListener('click',()=>{ const w=state.w, n=1<<w, want=v&mask(w); if(inU.value.trim()===''){ stage1fb.innerHTML='<p class="tip">Type the unsigned number first.</p>'; return; }
-    const ok=Number(inU.value)===want;
-    stage1fb.innerHTML=`<p>${mark(ok)} ${v<0?`${v} is ${-v} steps back from 0 round the wheel of ${n}, which lands on ${n} − ${-v} = <strong>${want}</strong>. The same spoke carries ${v} on the inside and ${want} on the outside.`:`${v} is not negative, so no steps back: the same spoke carries <strong>${want}</strong> on the outside.`}</p>`+(w===4?`<div class="wheelwrap"><div>${wheelSvg(0,0,{markOnly:true,mark:want,centre:v+' = '+want,hideB:true})}</div><p class="tip">Red dot: the spoke for ${v}. Now write the unsigned number ${want} in bits.</p></div>`:'')+`<p>Step 2: build ${want} from place values by tapping the cells.</p>`;
+  host.querySelector('.check1').addEventListener('click',()=>{ const w=state.w, n=1<<w, want=v&mask(w); const raw=inU.value.trim(); if(raw===''){ stage1fb.innerHTML='<p class="tip">Type the unsigned number first.</p>'; return; }
+    if(new RegExp('^[01]{'+w+'}$').test(raw)&&!(w===4&&Number(raw)<=15&&!/[2-9]/.test(raw)&&raw.length<4)){ const asBits=parseInt(raw,2); stage1fb.innerHTML=`<p class="tip">That looks like a bit pattern, ${raw}${asBits===want?', and it is the right one':''}. Step 1 wants the number on the wheel's outer ring, in decimal, before the bits: for ${v} that is ${v<0?n+' − '+(-v)+' = ':''}${want}. Type ${want} here; the bits come in step 2.</p>`; return; }
+    const ok=Number(raw)===want;
+    stage1fb.innerHTML=`<p>${mark(ok)}${ok?'':' You wrote '+raw+'.'} ${v<0?`${v} is ${-v} steps back from 0 round the wheel of ${n}, which lands on ${n} − ${-v} = <strong>${want}</strong>. The same spoke carries ${v} on the inside and ${want} on the outside.`:`${v} is not negative, so no steps back: the same spoke carries <strong>${want}</strong> on the outside.`}</p>`+(w===4?`<div class="wheelwrap"><div>${wheelSvg(0,0,{markOnly:true,mark:want,centre:v+' = '+want,hideB:true})}</div><p class="tip">Red dot: the spoke for ${v}. Now write the unsigned number ${want} in bits.</p></div>`:'')+`<p>Step 2: build ${want} from place values by tapping the cells.</p>`;
     stage2.hidden=false; drawCells(); if(!ok&&!done){ bump('write',false); done=true; } });
   host.querySelector('.check').addEventListener('click',()=>{ const w=state.w, M=mask(w), want=v&M; const ok=typed===want; if(!done){ bump('write',ok); done=true; }
     const pos=Math.abs(v), np=(~pos)&M;
