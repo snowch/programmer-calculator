@@ -345,7 +345,21 @@ ol.trace li{margin:0 0 4px}
     <h2>2. One byte, both loads</h2>
     <p>Here is a byte put through both loads, with the registers they leave behind, and then a byte on which the two loads agree. The dashed cells are the ones the load had to invent.</p>
     <div class="hood" id="hoodFixed"></div>
-    <p>Zero extension keeps the unsigned value: the register holds the same number the byte did. Sign extension keeps the signed value: a byte that read as −128 becomes a 32-bit word that reads as −128, which needs the top 24 bits to be 1s. Both are "the same number, now with room to spare". They disagree about which number the byte was, and that is the only disagreement there is.</p>
+    <h3>Why anything has to be written there</h3>
+    <p>A register cell is a flip-flop, and a flip-flop is always holding a 0 or a 1. There is no third state meaning "empty" or "not in use". So when an 8-bit value goes into a 32-bit register, the other 24 cells will contain <em>something</em> whether anyone chooses it or not, and the only question is whether what they contain changes the number. The two loads are the two fills that do not.</p>
+    <h3>Why the fill does not change the number</h3>
+    <p>For an unsigned number the fill is zeros, and leading zeros are worth nothing: 0005 is 5. Bits 8 to 31 have place values 256 up to 2<sup>31</sup>, and a 0 in each contributes 0, so the register reads exactly what the byte read.</p>
+    <p>For a signed number the fill is copies of the top bit, and the reason that works is easiest to see from −1. In two's complement, −1 is all ones at every width: 0xFF as a byte, 0xFFFFFFFF as a 32-bit word. Every other negative number is −1 with a few of its low bits cleared, so it is a run of leading ones followed by the bits that make it specific. Leading ones are to a negative number what leading zeros are to a positive one: you can add as many as you like without changing the value. Copying the top bit upward adds exactly those.</p>
+    <table class="truth" style="margin:4px 0 10px">
+      <tr><th>value</th><th>as a byte</th><th>as a 32-bit word</th><th>what the fill added</th></tr>
+      <tr><td>5</td><td>0x05</td><td>0x00000005</td><td>leading zeros</td></tr>
+      <tr><td>127</td><td>0x7F</td><td>0x0000007F</td><td>leading zeros</td></tr>
+      <tr><td>−1</td><td>0xFF</td><td>0xFFFFFFFF</td><td>leading ones</td></tr>
+      <tr><td>−2</td><td>0xFE</td><td>0xFFFFFFFE</td><td>leading ones</td></tr>
+      <tr><td>−128</td><td>0x80</td><td>0xFFFFFF80</td><td>leading ones</td></tr>
+    </table>
+    <p>The <a href="adding-to-subtracting.html">wheel</a> says the same thing another way. On the 256-position wheel, −128 is 128 steps back from 0, which lands on 0x80. On a wheel with 2<sup>32</sup> positions, 128 steps back from 0 lands on 0xFFFFFF80. Sign extension moves a number from the small wheel to the same place on the big one.</p>
+    <p>So both loads produce "the same number, now with room to spare". They disagree only about which number the byte was, 128 or −128, and that is the whole disagreement.</p>
   </section>
 
   <section class="tut" id="live">
