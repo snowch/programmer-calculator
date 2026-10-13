@@ -466,7 +466,9 @@ ol.trace li{margin:0 0 4px}
     </div>
     <ol class="trace" id="asmTrace"></ol>
     <h3>Under the hood</h3>
-    <p>The same two instructions, bit by bit. First the load, which has to turn a byte into a 32-bit register, then the compare, which is the lab's subtraction with 32 columns instead of the lab's four or eight. Switch the declaration above and watch which cells change; if nothing changes, the panel says why.</p>
+    <p>The same two instructions, bit by bit. First the load, then the compare.</p>
+    <p>Why does a load have to turn a byte into a 32-bit value at all? Because the register is the only place the processor can compute, and on ARM every register is 32 bits wide. Memory is addressed in bytes, so a <code>uint8_t</code> or <code>int8_t</code> occupies one byte there. But <code>CMP</code>, like every ALU instruction, works on whole registers, and there is no 8-bit compare to use instead. So the byte must become a 32-bit value on its way in, and something has to be chosen for the 24 bits that were never in memory. A true 8-bit processor, with 8-bit registers, would do no widening at all, and its flags would match the lab's exactly.</p>
+    <p>So: first the load, which widens the byte, then the compare, which is the lab's subtraction with 32 columns instead of the lab's four or eight. Switch the declaration above and watch which cells change; if nothing changes, the panel says why.</p>
     <div class="row asmPresets"></div>
     <div class="row"><span>Declared as</span><button class="small asmType" type="button" data-s="0" aria-pressed="true">uint8_t (unsigned)</button><button class="small asmType" type="button" data-s="1" aria-pressed="false">int8_t (signed)</button></div>
     <div class="hood" id="hood"></div>
