@@ -324,9 +324,12 @@ nav.pager .next{text-align:right}
 nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
 @media (max-width:640px){nav.pager{grid-template-columns:1fr}nav.pager .next{text-align:left}}
 
-.wheelwrap{display:grid;grid-template-columns:300px minmax(0,1fr);gap:8px 24px;align-items:center;margin:8px 0 12px}
+.wheelwrap{display:grid;grid-template-columns:344px minmax(0,1fr);gap:8px 24px;align-items:center;margin:8px 0 12px}
 @media (max-width:640px){.wheelwrap{grid-template-columns:minmax(0,1fr)}}
-.wheelsvg{width:100%;max-width:300px;height:auto;display:block}
+.wheelsvg{width:100%;max-width:344px;height:auto;display:block}
+.wheelsvg .lab.bits{font-size:9px;fill:var(--ink-2);font-family:var(--mono)}
+.wheelsvg .lab.bits.hi{fill:var(--ink);font-weight:600}
+.wheelsvg .lab.bits.hi.r{fill:var(--carry)}
 .wheelsvg .ring{fill:none;stroke:var(--rule);stroke-width:1.5}
 .wheelsvg .tick{stroke:var(--ink-2);stroke-width:1.2}
 .wheelsvg .lab{font-size:11px;fill:var(--ink)}
@@ -363,7 +366,7 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
     <h2>1. A byte wraps around</h2>
     <p>A register has a fixed number of bits, so it can hold only so many patterns: 16 at 4 bits, 256 at 8. Count up past the last one and you are back at zero. Count down past zero and you are back at the last one. The patterns sit on a wheel, not a line.</p>
     <p>Subtracting B means stepping back B places around that wheel. If the steps never pass zero, the answer is the ordinary one. If they do, the register lands on a pattern near the top of the range, and that pattern is the result. Nothing has gone wrong: the hardware did the only thing it can do.</p>
-    <div class="wheelwrap"><div><div id="wheel"></div><p class="tip" style="text-align:center">Outside: unsigned labels. Inside: signed labels. Amber dot: A. Red dot: A − B.</p></div><p id="wrapTxt"></p></div>
+    <div class="wheelwrap"><div><div id="wheel"></div><p class="tip" style="text-align:center">Outermost: the four bits of each pattern. Then its unsigned reading, then its signed reading. Amber dot: A. Red dot: A − B.</p></div><p id="wrapTxt"></p></div>
     <p>The wheel also explains why the same pattern has two readings. Going round the outside, the numbers run 0 up to 15. Going round the inside, the top half has been relabelled as negatives, so 15 is −1, 14 is −2, and so on. Stepping back from 3 by 5 lands on the pattern that is 14 to one reading and −2 to the other. The circuit does not know which label you are using, and does not need to.</p>
   </section>
 
@@ -441,12 +444,13 @@ function carryRow(cin,w,label){ let h=`<div class="hrow"><span class="hl">${labe
 function wheel(a,b,w){
   const host=document.getElementById('wheel'); if(!host) return;
   if(w!==4){ host.innerHTML='<p class="tip">The wheel is drawn at 4 bits; at 8 bits it would need 256 positions. Switch the width to 4 to see it.</p>'; return; }
-  const N=16, R=104, cx=150, cy=150, r=sub(a,b,w).res;
+  const N=16, R=100, cx=172, cy=172, r=sub(a,b,w).res;
   const ang=k=>(-90+k*360/N)*Math.PI/180, px=(k,rr)=>cx+rr*Math.cos(ang(k)), py=(k,rr)=>cy+rr*Math.sin(ang(k));
-  let s=`<svg viewBox="0 0 300 300" class="wheelsvg" role="img" aria-label="A wheel of 16 positions showing ${a} minus ${b} landing on ${r}">`;
+  let s=`<svg viewBox="0 0 344 344" class="wheelsvg" role="img" aria-label="A wheel of 16 positions showing ${a} minus ${b} landing on ${r}">`;
   s+=`<circle cx="${cx}" cy="${cy}" r="${R}" class="ring"/>`;
   for(let k=0;k<N;k++){ s+=`<line x1="${px(k,R-6)}" y1="${py(k,R-6)}" x2="${px(k,R+6)}" y2="${py(k,R+6)}" class="tick"/>`;
-    s+=`<text x="${px(k,R+24)}" y="${py(k,R+24)+4}" text-anchor="middle" class="lab u">${k}</text>`;
+    s+=`<text x="${px(k,R+22)}" y="${py(k,R+22)+4}" text-anchor="middle" class="lab u">${k}</text>`;
+    s+=`<text x="${px(k,R+50)}" y="${py(k,R+50)+3}" text-anchor="middle" class="lab bits${k===a?' hi':''}${k===r?' hi r':''}">${k.toString(2).padStart(4,'0')}</text>`;
     s+=`<text x="${px(k,R-24)}" y="${py(k,R-24)+4}" text-anchor="middle" class="lab s">${signed(k,4)}</text>`; }
   // arc from a backwards b steps
   if(b>0){ const steps=b, from=a, to=((a-b)%N+N)%N; const large=steps>8?1:0; const rr=R;
@@ -456,7 +460,8 @@ function wheel(a,b,w){
     const t=ang(to), dx=Math.sin(t), dy=-Math.cos(t); const hx=px(to,rr), hy=py(to,rr);
     s+=`<polygon points="${hx},${hy} ${hx+dx*9-dy*4},${hy+dy*9+dx*4} ${hx+dx*9+dy*4},${hy+dy*9-dx*4}" class="arrow"/>`; }
   s+=`<circle cx="${px(a,R)}" cy="${py(a,R)}" r="7" class="dot start"/><circle cx="${px(r,R)}" cy="${py(r,R)}" r="7" class="dot end"/>`;
-  s+=`<text x="${cx}" y="${cy-10}" text-anchor="middle" class="mid">${a} − ${b}</text><text x="${cx}" y="${cy+12}" text-anchor="middle" class="mid">= ${r} = ${signed(r,4)}</text>`;
+  const b4=x=>x.toString(2).padStart(4,'0');
+  s+=`<text x="${cx}" y="${cy-18}" text-anchor="middle" class="mid">${a} − ${b}</text><text x="${cx}" y="${cy+4}" text-anchor="middle" class="mid">= ${r} = ${signed(r,4)}</text><text x="${cx}" y="${cy+26}" text-anchor="middle" class="lab bits">${b4(a)} − ${b4(b)} = ${b4(r)}</text>`;
   host.innerHTML=s+'</svg>';
 }
 function render(){
@@ -464,7 +469,7 @@ function render(){
   document.querySelectorAll('button[data-w]').forEach(x=>x.setAttribute('aria-pressed',Number(x.dataset.w)===w?'true':'false'));
   wheel(a,b,w);
   const wrapTxt=document.getElementById('wrapTxt'); if(wrapTxt){ const t=a-b; wrapTxt.innerHTML = t<0
-    ? `${a} − ${b} would be ${t}, which is below zero. ${w} bits cannot hold it, so counting back past 0 wraps round to ${n-1} and lands on <strong>${f.res}</strong>: ${hex(f.res,w)}. Read as unsigned that is ${f.res}, which is ${t} + ${n}. Read as signed it is <strong>${signed(f.res,w)}</strong>, the answer you expected. Same bits, both readings.`
+    ? `${a} − ${b} would be ${t}, which is below zero. ${w} bits cannot hold it, so counting back past 0 wraps round to ${n-1} and lands on the pattern <strong>${f.res.toString(2).padStart(w,'0')}</strong>, ${hex(f.res,w)}. Read as unsigned that pattern is <strong>${f.res}</strong>, which is ${t} + ${n}. Read as signed it is <strong>${signed(f.res,w)}</strong>, the answer you expected. Same bits, both readings.`
     : `${a} − ${b} = ${t}, which stays at or above zero, so nothing wraps: the result is ${hex(f.res,w)}, ${f.res} unsigned and ${signed(f.res,w)} signed.`; }
   // negation rows
   const neg=document.getElementById('neg'); if(neg){ const nb1=(f.nb+1)&M; neg.innerHTML=idxRow(w)+bitRow('B',b,w,{val:`${hex(b,w)} = ${b}`})+bitRow('NOT B',f.nb,w,{val:`${hex(f.nb,w)} = ${f.nb} = ${n-1} − ${b}`})+bitRow('NOT B + 1',nb1,w,{val:`${hex(nb1,w)} = ${nb1} = ${n} − ${b}${b?`, which reads as ${signed(nb1,w)} signed`:''}`}); }
