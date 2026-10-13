@@ -458,22 +458,6 @@ function renderHood(S,a,b,w,a32,b32){
     (S?`<code>BLT</code> reads N and V: ${N} ${N!==V?'≠':'='} ${V}, so it is ${N!==V?'taken':'not taken'}.`:`<code>BLO</code> reads only C: ${C===0?'0, a borrow happened, so it is taken':'1, no borrow, so it is not taken'}.`)+`</p>`;
 }
 
-/* ---------- CMP snippet: show the working ---------- */
-function renderCmpWork(a,b,w){
-  const host=document.getElementById('asmWork'); if(!host||host.hidden) return;
-  const M=mask(w), nb=(~b)&M; const cin=[1]; let res=0;
-  for(let i=0;i<w;i++){ const x=bit(a,i), y=bit(nb,i), c=cin[i]; res|=(x^y^c)<<i; cin[i+1]=(x&y)|(c&(x^y)); }
-  const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`, gap=i=>(i%8===0&&i!==0)?' gap':'';
-  const row=(label,x,opts={})=>{ let h=`<div class="hrow"><span class="hl">${label}</span>`+cell('','blank'); for(let i=w-1;i>=0;i--){ const v=bit(x,i); h+=cell(v,((v?'on':'')+gap(i)+(opts.top&&i===w-1?' top':'')).trim()); } return h+`<span class="hv">${opts.val||''}</span></div>`; };
-  let idx=`<div class="hrow"><span class="hl">bit</span>`+cell('','blank'); for(let i=w-1;i>=0;i--) idx+=cell((i%8===7||i%8===0||i===w-1)?i:'','c'+gap(i)); idx+='<span class="hv"></span></div>';
-  let car=`<div class="hrow"><span class="hl">carries</span>`+cell(cin[w],'c'+(cin[w]?' on':'')+' v'); for(let i=w-1;i>=0;i--) car+=cell(cin[i],('c'+(cin[i]?' on':'')+(i===w-1?' v':'')+gap(i)).trim()); car+='<span class="hv">bit 0 gets the + 1</span></div>';
-  const N=bit(res,w-1), Z=res===0?1:0, C=cin[w], V=cin[w]^cin[w-1];
-  host.innerHTML=`<p class="hnote" style="margin-top:4px">The ALU has no subtractor. It adds A to NOT B (every bit of B flipped) with a 1 fed into the first carry-in, which is A + (${M} − B) + 1 = A − B + ${M+1}; the +${M+1} is the carry that falls off the top, if there is one.</p>`+
-    idx+car+row('A',a,{val:`${hex(a,w)} = ${a}`})+row('NOT B',nb,{val:`${hex(nb,w)}  (B = ${hex(b,w)})`})+row('= A − B',res,{top:true,val:`${hex(res,w)} = ${res} unsigned, ${signed(res,w)} signed`})+
-    `<div class="hflags"><span><b>N</b> = top bit = <b>${N}</b></span><span><b>Z</b> = all zero? <b>${Z}</b></span><span><b>C</b> = carry out = <b>${C}</b>${C?', no borrow':', a borrow'}</span><span><b>V</b> = carry in ≠ carry out at bit ${w-1} = <b>${V}</b></span></div>`;
-}
-(function(){ const btn=document.getElementById('asmWorkBtn'), box=document.getElementById('asmWork'); if(!btn||!box) return;
-  btn.addEventListener('click',()=>{ box.hidden=!box.hidden; btn.setAttribute('aria-pressed',box.hidden?'false':'true'); btn.textContent=box.hidden?'show the working':'hide the working'; update(); }); })();
 function update(){
   const a=state.a&0xFF, b=state.b&0xFF, S=state.S, w=8;
   document.querySelectorAll('button.asmType').forEach(x=>x.setAttribute('aria-pressed',(x.dataset.s==='1')===S?'true':'false'));
