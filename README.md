@@ -40,6 +40,7 @@ works from any sub-path):
 | `docs/adding-to-subtracting.html` | From adding to subtracting: wrap-around on a 16-position wheel, negation as NOT then add 1, and the adder subtracting with the borrow read off the carry, with bits you can tap |
 | `docs/bytes-to-registers.html` | From bytes to registers: why a byte is widened to fill a 32-bit register, what LDRB and LDRSB write into the spare bits, and the widened compare's flags, cell by cell |
 | `docs/who-decides.html` | Signed or unsigned: who decides? Every ARM branch on one compare, a compiled if in C and assembly with its trace, for any pair of bytes |
+| `docs/readings-drills.html` | Two readings: drills. Predict-then-check exercises on two's complement at 4 and 8 bits: read a pattern both ways, write a value as bits, step round the wheel, negate by hand, judge whether a sum fits |
 | `docs/flag-drills.html` | Flag drills: randomised predict-then-check exercises on CMP flags, ARM signed/unsigned branches, recovering a type from compiled code, and widening loads |
 | `.github/workflows/pages.yml` | Deploys the site to GitHub Pages on every push to `main` |
 | `.nojekyll` | Tells GitHub Pages to publish the files as-is |
