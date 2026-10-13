@@ -465,15 +465,8 @@ ol.trace li{margin:0 0 4px}
       <div><h3>ARM assembly</h3><pre class="work asmprog" id="asmArm"></pre></div>
     </div>
     <ol class="trace" id="asmTrace"></ol>
-    <h3>Under the hood</h3>
-    <p>The same two instructions, bit by bit. First the load, then the compare.</p>
-    <p>Why does a load have to turn a byte into a 32-bit value at all? Because the register is the only place the processor can compute, and on ARM every register is 32 bits wide. Memory is addressed in bytes, so a <code>uint8_t</code> or <code>int8_t</code> occupies one byte there. But <code>CMP</code>, like every ALU instruction, works on whole registers, and there is no 8-bit compare to use instead. So the byte must become a 32-bit value on its way in, and something has to be chosen for the 24 bits that were never in memory. A true 8-bit processor, with 8-bit registers, would do no widening at all, and its flags would match the lab's exactly.</p>
-    <p>Here is one byte put through both loads, with the registers they leave behind, and then a byte on which the two loads agree.</p>
-    <div class="hood" id="hoodFixed"></div>
-    <p>The live panel below does the same for the pair loaded in the lab, under the declaration you choose, and then carries on into the compare. First the load, which widens the byte, then the compare, which is the lab's subtraction with 32 columns instead of the lab's four or eight. Switch the declaration above and watch which cells change; if nothing changes, the panel says why.</p>
-    <div class="row asmPresets"></div>
-    <div class="row"><span>Declared as</span><button class="small asmType" type="button" data-s="0" aria-pressed="true">uint8_t (unsigned)</button><button class="small asmType" type="button" data-s="1" aria-pressed="false">int8_t (signed)</button></div>
-    <div class="hood" id="hood"></div>
+    <h3>What the loads do to the bits</h3>
+    <p>The two loads differ only in the 24 bits that were never in memory. On ARM every register is 32 bits wide and <code>CMP</code> compares whole registers, so a byte has to be widened on its way in: <code>LDRB</code> fills the spare bits with 0 and <code>LDRSB</code> fills them with copies of the byte's top bit, which is why the same byte 0x80 becomes 128 under one and −128 under the other, and why the two loads agree whenever the top bit is 0. The companion page <a href="bytes-to-registers.html"><em>From bytes to registers</em></a> draws both loads and the widened compare cell by cell, for any pair you choose, and explains why the 32-bit flags can differ from the lab's 8-bit ones while the branch lands the same way.</p>
     <p>There are likewise two right shifts, two widening loads and two divides, because those are the operations where the top bit's meaning changes the answer. (A load is widening whenever the register is wider than the value in memory, which is every byte load on a 32-bit machine: the spare bits have to be filled with something, and the two loads fill them differently, as the program above shows.) A typed language records the decision once: in C, <code>unsigned</code> or <code>int</code> tells the compiler which member of each pair to emit, so you state the reading at the declaration and the compiler applies it at every operation.</p>
     <p>That is why the values table above always shows both readings, and why the flag cards say "as unsigned" and "as signed": C answers whether the unsigned reading of the result fits, V whether the signed one does, and the same pattern can be right under one and wrong under the other. Load <code>0x80 vs 0x7F</code> above and watch the two readings order the same bits oppositely.</p>
     <p>To make this automatic, the <a href="flag-drills.html">flag drills</a> page gives randomised predict-then-check exercises on exactly these four things: the flags of a <code>CMP</code>, which branches fire, recovering the type from a compiled <code>if</code>, and widening a byte by hand.</p>
@@ -1270,7 +1263,7 @@ function renderAsmProg(f,a,b,w){
   ].join('');
   const ok=taken===less;
   tH.innerHTML=[
-    `<li><code>${ldr.trim()}</code> copies the ${w}-bit value ${hex(a,w)} into R1, a 32-bit register. Only the bottom ${w} bits come from memory, so the load has to fill in the other ${32-w}, and that is why there are two load instructions. `+
+    `<li><code>${ldr.trim()}</code> copies the ${w}-bit value ${hex(a,w)} into R1, a 32-bit register. Only the bottom ${w} bits come from memory, so the load has to fill in the other ${32-w}, and that is why there are two load instructions (drawn bit by bit on <a href="bytes-to-registers.html">From bytes to registers</a>). `+
       (S?`<code>LDRSB</code> copies the top bit into them (sign extension), giving ${h32(a32)}, which is ${sv(a32)} in 32 bits. <code>LDRB</code> would have filled them with zeros, giving ${h32(a)}, which is ${a}.`
         :`<code>LDRB</code> fills them with zeros (zero extension), giving ${h32(a32)}, which is ${a32}. <code>LDRSB</code> would have copied the top bit into them, giving ${h32(ext8(a))}, which is ${sv(ext8(a))}.`)+
       ` The <code>${ty.trim()}</code> declaration told the compiler which to use, so the reading is settled before <code>CMP</code> runs.`+
@@ -1280,83 +1273,12 @@ function renderAsmProg(f,a,b,w){
     `<li><code>${br.trim()} less</code> tests ${test}. ${S?`N is ${yn(N32)} and V is ${yn(V32)}`:`C is ${yn(C32)}`}, so the branch is <strong>${taken?'taken: execution jumps to <code>less</code>':'not taken: execution falls through to the next line'}</strong>.</li>`,
     `<li><code>MOV R0, #${taken?1:0}</code> sets r = ${taken?1:0}. In C, ${va} &lt; ${vb} is ${less}, so the program ${ok?'agrees ✓':'disagrees ✗'}.</li>`,
   ].join('');
-  renderHood(S,a,b,w,a32,b32);
   renderCmpWork(a,b,w);
   document.querySelectorAll('button.asmType').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.s==='1')===S?'true':'false'));
 }
 document.querySelectorAll('button.asmType').forEach(b=>b.addEventListener('click',()=>{ asmSigned=b.dataset.s==='1'; update(); }));
-/* ---------- under the hood: the load and the compare, bit by bit ---------- */
-function renderHood(S,a,b,w,a32,b32){
-  const host=document.getElementById('hood'); if(!host) return;
-  const nb=(~b32)>>>0;
-  const cin=new Array(33).fill(0); cin[0]=1; let res=0;
-  for(let i=0;i<32;i++){ const x=bit(a32,i), y=bit(nb,i), c=cin[i]; res|=((x^y^c)<<i); cin[i+1]=(x&y)|(c&(x^y)); }
-  res=res>>>0;
-  const N=res>>>31, Z=res===0?1:0, C=cin[32], V=cin[32]^cin[31];
-  const h32=x=>'0x'+x.toString(16).toUpperCase().padStart(8,'0');
-  const sv=x=>x>>>31?x-4294967296:x;
-  const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`;
-  const gap=i=>(i%8===0&&i!==0)?' gap':'';
-  // one row: lead cell + 32 cells (bit 31 first) + value
-  const row=(label,cells,val)=>`<div class="hrow"><span class="hl">${label}</span>${cells}<span class="hv">${val||''}</span></div>`;
-  const bits=(x,opts={})=>{ let h=cell('', 'blank'); for(let i=31;i>=0;i--){ const v=bit(x,i); let cls=(v?'on':'')+gap(i); if(opts.fill&&i>=w) cls+=' fill'; if(opts.blank&&i>=w) cls=' blank'+gap(i); if(opts.top&&i===31) cls+=' top'; h+=cell(v,cls.trim()); } return h; };
-  const idx=()=>{ let h=cell('', 'blank'); for(let i=31;i>=0;i--){ const t=(i%8===7||i%8===0)?i:''; h+=cell(t,'c'+gap(i)); } return h; };
-  const carries=()=>{ let h=cell(cin[32],'c'+(cin[32]?' on':'')+' v'); for(let i=31;i>=0;i--){ h+=cell(cin[i],('c'+(cin[i]?' on':'')+(i===31?' v':'')+gap(i)).trim()); } return h; };
-  const ld=S?'LDRSB':'LDRB', fillTxt=S?`copies bit ${w-1} of the byte into bits ${w} to 31`:`puts 0 into bits ${w} to 31`;
-  const sameNote=(!bit(a,w-1)&&!bit(b,w-1))?`<p class="hnote" style="margin-top:6px"><strong>Both top bits are 0 here, so the two loads give the same registers and the same flags.</strong> Sign extension copies the top bit; zero extension writes 0; with a top bit of 0 those are the same cells. Switching the declaration changes only the mnemonics. Set the top bit of A or B in the lab, or load <code>0x80 vs 0x7F</code>, to see the cells change.</p>`:'';
-  host.innerHTML=sameNote+
-    `<h4>1. The load widens the byte</h4>`+
-    row('bit', idx())+
-    row(`a in memory`, bits(a,{blank:true}), `${hex(a,w)}`)+
-    row(`R1 after ${ld}`, bits(a32,{fill:true}), `${h32(a32)} = ${S?sv(a32):a32}`)+
-    row(`b in memory`, bits(b,{blank:true}), `${hex(b,w)}`)+
-    row(`R2 after ${ld}`, bits(b32,{fill:true}), `${h32(b32)} = ${S?sv(b32):b32}`)+
-    `<p class="hnote">Only the right-hand ${w} cells of each register came from memory. <code>${ld}</code> ${fillTxt}, the dashed cells. ${S?`A copied 1 keeps a negative number negative at 32 bits; a copied 0 keeps a positive one positive.`:`Zeros keep the value the same, ${a32}, now with room to spare.`}</p>`+
-    `<h4>2. CMP subtracts: R1 + NOT R2 + 1, 32 bits wide</h4>`+
-    row('bit', idx())+
-    row('carries', carries(), `bit 0 gets the + 1`)+
-    row('R1', bits(a32), h32(a32))+
-    row('NOT R2', bits(nb), h32(nb))+
-    row('= R1 − R2', bits(res,{top:true}), `${h32(res)}, thrown away`)+
-    `<div class="hflags">`+
-    `<span><b>N</b> = bit 31 of the result = <b>${N}</b></span>`+
-    `<span><b>Z</b> = all 32 bits zero? <b>${Z}</b></span>`+
-    `<span><b>C</b> = carry out of bit 31 = <b>${C}</b></span>`+
-    `<span><b>V</b> = carry into bit 31 ≠ carry out = ${cin[31]} ≠ ${cin[32]}? <b>${V}</b></span>`+
-    `</div>`+
-    `<p class="hnote">Same recipe as the lab's SUB, just 32 columns instead of ${w}. The two carries that decide C and V are the leftmost pair in the carries row. `+
-    (S?`<code>BLT</code> reads N and V: ${N} ${N!==V?'≠':'='} ${V}, so it is ${N!==V?'taken':'not taken'}.`:`<code>BLO</code> reads only C: ${C===0?'0, a borrow happened, so it is taken':'1, no borrow, so it is not taken'}.`)+`</p>`;
-}
-
-/* ---------- CMP snippet: show the working ---------- */
-function renderCmpWork(a,b,w){
-  const host=document.getElementById('asmWork'); if(!host||host.hidden) return;
-  const M=mask(w), nb=(~b)&M; const cin=[1]; let res=0;
-  for(let i=0;i<w;i++){ const x=bit(a,i), y=bit(nb,i), c=cin[i]; res|=(x^y^c)<<i; cin[i+1]=(x&y)|(c&(x^y)); }
-  const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`, gap=i=>(i%8===0&&i!==0)?' gap':'';
-  const row=(label,x,opts={})=>{ let h=`<div class="hrow"><span class="hl">${label}</span>`+cell('','blank'); for(let i=w-1;i>=0;i--){ const v=bit(x,i); h+=cell(v,((v?'on':'')+gap(i)+(opts.top&&i===w-1?' top':'')).trim()); } return h+`<span class="hv">${opts.val||''}</span></div>`; };
-  let idx=`<div class="hrow"><span class="hl">bit</span>`+cell('','blank'); for(let i=w-1;i>=0;i--) idx+=cell((i%8===7||i%8===0||i===w-1)?i:'','c'+gap(i)); idx+='<span class="hv"></span></div>';
-  let car=`<div class="hrow"><span class="hl">carries</span>`+cell(cin[w],'c'+(cin[w]?' on':'')+' v'); for(let i=w-1;i>=0;i--) car+=cell(cin[i],('c'+(cin[i]?' on':'')+(i===w-1?' v':'')+gap(i)).trim()); car+='<span class="hv">bit 0 gets the + 1</span></div>';
-  const N=bit(res,w-1), Z=res===0?1:0, C=cin[w], V=cin[w]^cin[w-1];
-  host.innerHTML=`<p class="hnote" style="margin-top:4px">The ALU has no subtractor. It adds A to NOT B (every bit of B flipped) with a 1 fed into the first carry-in, which is A + (${M} − B) + 1 = A − B + ${M+1}; the +${M+1} is the carry that falls off the top, if there is one.</p>`+
-    idx+car+row('A',a,{val:`${hex(a,w)} = ${a}`})+row('NOT B',nb,{val:`${hex(nb,w)}  (B = ${hex(b,w)})`})+row('= A − B',res,{top:true,val:`${hex(res,w)} = ${res} unsigned, ${signed(res,w)} signed`})+
-    `<div class="hflags"><span><b>N</b> = top bit = <b>${N}</b></span><span><b>Z</b> = all zero? <b>${Z}</b></span><span><b>C</b> = carry out = <b>${C}</b>${C?', no borrow':', a borrow'}</span><span><b>V</b> = carry in ≠ carry out at bit ${w-1} = <b>${V}</b></span></div>`;
-}
-(function(){ const btn=document.getElementById('asmWorkBtn'), box=document.getElementById('asmWork'); if(!btn||!box) return;
-  btn.addEventListener('click',()=>{ box.hidden=!box.hidden; btn.setAttribute('aria-pressed',box.hidden?'false':'true'); btn.textContent=box.hidden?'show the working':'hide the working'; update(); }); })();
 
 window.addEventListener('resize',()=>{ clearTimeout(window.__bitlabResize); window.__bitlabResize=setTimeout(update,120); });
-/* ---------- under the hood: fixed comparison of the two loads ---------- */
-(function(){
-  const host=document.getElementById('hoodFixed'); if(!host) return;
-  const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`, gap=i=>(i%8===0&&i!==0)?' gap':'';
-  const h32=x=>'0x'+(x>>>0).toString(16).toUpperCase().padStart(8,'0'), sv=x=>x>>>31?x-4294967296:x;
-  const row=(label,x,opts={})=>{ let h=`<div class="hrow"><span class="hl">${label}</span>`+cell('','blank'); for(let i=31;i>=0;i--){ const v=bit(x,i); let cls=(v?'on':'')+gap(i); if(opts.blank&&i>=8) cls=' blank'+gap(i); else if(opts.fill&&i>=8) cls+=' fill'; if(opts.mark&&i===7) cls+=' top'; h+=cell(v,cls.trim()); } return h+`<span class="hv">${opts.val||''}</span></div>`; };
-  let idx=`<div class="hrow"><span class="hl">bit</span>`+cell('','blank'); for(let i=31;i>=0;i--) idx+=cell((i%8===7||i%8===0)?i:'','c'+gap(i)); idx+='<span class="hv"></span></div>';
-  const one=(v,title)=>{ const z=v, s=(bit(v,7)?(v|0xFFFFFF00):v)>>>0; return `<h4>${title}</h4>`+idx+row('byte in memory',v,{blank:true,mark:true,val:`0x${v.toString(16).toUpperCase().padStart(2,'0')}, top bit ${bit(v,7)}`})+row('LDRB: fill with 0',z,{fill:true,val:`${h32(z)} = ${z}`})+row('LDRSB: copy bit 7',s,{fill:true,val:`${h32(s)} = ${sv(s)}`}); };
-  host.innerHTML=one(0x80,'One byte, both loads: 0x80')+`<p class="hnote">The byte is the same eight cells in both rows. Only the 24 dashed cells differ, and they differ because the two loads fill them by different rules: LDRB always writes 0, LDRSB writes whatever bit 7 was, here a 1. The first register reads as 128, the second as −128. That is the whole difference between a <code>uint8_t</code> and an <code>int8_t</code> once it is in a register.</p>`+
-    one(0x05,'The same two loads on 0x05')+`<p class="hnote">Bit 7 is 0, so copying it writes zeros, exactly what LDRB writes. Both loads give 0x00000005 and the declaration makes no difference to the bits. The two loads only disagree when the top bit is 1, which is why pairs with a top bit set are the ones worth loading below.</p>`;
-})();
 /* ---------- theme ---------- */
 (function(){
   const btn=document.getElementById('themeBtn'); if(!btn) return;
