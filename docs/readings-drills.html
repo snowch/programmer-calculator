@@ -394,7 +394,7 @@ svg.nl .sh.u{fill:var(--carry)}
     <button class="small themebtn" id="themeBtn" type="button">theme: auto</button>
   </div>
   <nav class="toc" aria-label="Drills">
-    <a href="#d1">1 Read a pattern both ways</a><a href="#d2">2 Write a value as a pattern</a><a href="#d6">3 Find it on the wheel</a><a href="#method">The method on paper</a><a href="#d3">4 Step round the wheel</a><a href="#d4">5 Negate by hand</a><a href="#d5">6 Does it fit?</a><a href="#how">How to use these</a>
+    <a href="#d1">1 Read a pattern both ways</a><a href="#d2">2 Write a value as a pattern</a><a href="#d6">3 Find it on the wheel</a><a href="#d3">4 Step round the wheel</a><a href="#d4">5 Negate by hand</a><a href="#d5">6 Does it fit?</a><a href="#how">How to use these</a>
   </nav>
   <div class="scorebar" aria-live="polite">
     <span>Width</span><button class="small" type="button" data-w="4" aria-pressed="true">4 bits</button><button class="small" type="button" data-w="8" aria-pressed="false">8 bits</button>
@@ -436,17 +436,9 @@ svg.nl .sh.u{fill:var(--carry)}
     <div class="feedback"></div>
   </section>
 
-  <section class="tut" id="method">
-    <h2>The method on paper, step by step</h2>
-    <p>If you prefer to work in decimal, this is the complete method, and it is sound: compute, fit the answer into the width, then convert with the top bit. Type any subtraction, in signed decimal, and watch each step.</p>
-    <div class="row"><label class="ans"><span>A =</span><input class="ain" type="text" inputmode="numeric" autocomplete="off" maxlength="5" value="3"></label><label class="ans"><span>B =</span><input class="bin2" type="text" inputmode="numeric" autocomplete="off" maxlength="5" value="6"></label><span>Load</span><button class="small" type="button" data-ab="3,6">3 − 6</button><button class="small" type="button" data-ab="5,-6">5 − (−6)</button><button class="small" type="button" data-ab="-8,1">−8 − 1</button><button class="small" type="button" data-ab="7,-1">7 − (−1)</button><button class="small" type="button" data-ab="2,2">2 − 2</button><button class="small rand" type="button">random</button></div>
-    <div class="steps"></div>
-    <p class="tip">The grey band above the axis is the signed range, the amber band below it the unsigned range; the ticks mark their ends. The black dot is the true decimal answer; the arrows show the shift of one wheel size when it has to be fitted. Both landings are the same bits.</p>
-  </section>
-
   <section class="tut drill" id="d3">
     <h2>4. Step round the wheel</h2>
-    <p>A subtraction, with the operands printed under one stated reading. Use whatever method you like, decimal or bits, to predict the pattern the register lands on and what it reads as under that reading. Then say whether the true answer fitted: about two prompts in five are chosen so that it does not, which is where the wrap, and later the flags, come from.</p>
+    <p>A subtraction, with the operands printed under one stated reading. Use whatever method you like, decimal or bits, to predict the pattern the register lands on and what it reads as under that reading. Then say whether the true answer fitted: about two prompts in five are chosen so that it does not, which is where the wrap, and later the flags, come from. If you work in decimal, the complete method is drawn step by step on <a href="adding-to-subtracting.html#paper">From adding to subtracting</a>.</p>
     <pre class="work prompt"></pre>
     <div class="row answers"><label class="ans"><span>lands on</span><input class="bin" type="text" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="0000"></label><label class="ans"><span class="rdlabel">reads as</span><input class="sin" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0"></label><span class="ans"><span>true answer fitted?</span><button class="small" type="button" data-q="fit" data-v="1" aria-pressed="false">yes</button><button class="small" type="button" data-q="fit" data-v="0" aria-pressed="false">no</button></span></div>
     <div class="row"><button class="op check" type="button">Check</button><button class="small next" type="button">Next subtraction</button></div>
@@ -634,40 +626,6 @@ function wheelSvg(a,b,opts={}){
     fb.innerHTML=`<p>${mark(ok)} The result pattern is <strong>${bits(r,w)}</strong>: ${r} unsigned, ${signed(r,w)} signed.</p><div class="hood">`+row('A',a,w,{val:`${a} unsigned, ${signed(a,w)} signed`})+row('B',b,w,{val:`${b} unsigned, ${signed(b,w)} signed`})+row('= R',r,w,{top:true,val:`${r} unsigned, ${signed(r,w)} signed`})+
       `<p class="hnote"><strong>Unsigned:</strong> ${a} + ${b} = ${a+b}, ${fitU?`which fits in ${w} bits, so the unsigned reading is right.`:`which does not fit: it is ${a+b-n} + ${n}, the register wrapped, and an ALU would set C = 1.`} ${(u==='1')===fitU?'✓':'✗'}<br><strong>Signed:</strong> ${signed(a,w)} + ${signed(b,w)} = ${signed(a,w)+signed(b,w)}, ${fitS?`which fits in the signed range, so the signed reading is right.`:`which is outside the signed range of −${n>>1} to ${(n>>1)-1}, so the signed reading is wrong, and an ALU would set V = 1.`} ${(s==='1')===fitS?'✓':'✗'}</p></div>`; });
   host.querySelector('.next').addEventListener('click',next); drills.push(next); next();
-})();
-/* ---------- the paper method, step by step ---------- */
-(function(){
-  const host=document.getElementById('method'); if(!host) return;
-  const inA=host.querySelector('.ain'), inB=host.querySelector('.bin2'), out=host.querySelector('.steps');
-  const m={a:3,b:6};
-  const line=(w,t,sr,ur)=>{ // number line from -2n .. 2n with the signed and unsigned ranges, the true value, and the landings
-    const n=1<<w, lo=-n, hi=2*n-1, W=640, H=132, pad=26, x=v=>pad+(v-lo)/(hi-lo)*(W-2*pad);
-    let s=`<svg viewBox="0 0 ${W} ${H}" class="nl" role="img" aria-label="number line showing ${t} fitted into ${w} bits">`;
-    s+=`<line x1="${x(lo)}" y1="70" x2="${x(hi)}" y2="70" class="axis"/>`;
-    s+=`<rect x="${x(-(n>>1))}" y="58" width="${x((n>>1)-1)-x(-(n>>1))}" height="12" class="band s"/>`;
-    s+=`<rect x="${x(0)}" y="70" width="${x(n-1)-x(0)}" height="12" class="band u"/>`;
-    for(const v of [lo,-(n>>1),0,(n>>1)-1,n-1,hi]) s+=`<line x1="${x(v)}" y1="66" x2="${x(v)}" y2="86" class="tick"/><text x="${x(v)}" y="124" text-anchor="middle" class="tk">${v}</text>`;
-    const arrow=(from,to,cls,y,below)=>{ if(from===to) return ''; const mid=(x(from)+x(to))/2, d=below?1:-1; return `<path d="M ${x(from)} ${y} Q ${mid} ${y+d*34} ${x(to)} ${y}" class="shift ${cls}"/><text x="${mid}" y="${y+d*22+(below?4:0)}" text-anchor="middle" class="sh ${cls}">${to>from?'+':'−'}${n}</text>`; };
-    s+=arrow(t,sr,'s',62,false)+arrow(t,ur,'u',80,true);
-    s+=`<circle cx="${x(t)}" cy="70" r="6" class="dot t"/><text x="${x(t)}" y="${t!==sr?16:40}" text-anchor="middle" class="dl">true ${t}</text>`;
-    s+=`<circle cx="${x(sr)}" cy="64" r="5" class="dot s"/><circle cx="${x(ur)}" cy="76" r="5" class="dot u"/>`;
-    return s+'</svg>';
-  };
-  const render=()=>{
-    const w=state.w, n=1<<w, half=n>>1;
-    let a=Number(inA.value), b=Number(inB.value); if(!Number.isFinite(a)) a=0; if(!Number.isFinite(b)) b=0;
-    a=Math.max(-half,Math.min(half-1,Math.trunc(a))); b=Math.max(-half,Math.min(half-1,Math.trunc(b))); inA.value=a; inB.value=b; m.a=a; m.b=b;
-    const t=a-b, pat=t&mask(w), sr=signed(pat,w), ur=pat, ua=a&mask(w), ub=b&mask(w);
-    const fitS=sr===t;
-    out.innerHTML=
-      `<div class="step"><h4>1. Compute in decimal</h4><p>${a} − ${b} = <strong>${t}</strong>. Read the same two patterns as unsigned and it is ${ua} − ${ub} = ${ua-ub}; the two answers differ by ${(ua-ub)-t===0?'nothing':'a multiple of '+n}, which the next step removes anyway.</p></div>`+
-      `<div class="step"><h4>2. Fit it into ${w} bits</h4>${line(w,t,sr,ur)}<p>${fitS?`${t} is already inside the signed range, so it stays ${t}.`:`${t} is outside the signed range −${half} to ${half-1}, so ${t>0?'subtract':'add'} ${n}: ${t} ${t>0?'−':'+'} ${n} = <strong>${sr}</strong>. That is the wrap; the register cannot tell ${t} from ${sr}.`} Under the unsigned reading the same pattern must land in 0 to ${n-1}, which is <strong>${ur}</strong>${ur===t?'':`, ${t} ${ur>t?'+':'−'} ${Math.abs(ur-t)}`}. The two landings, ${sr} and ${ur}, are ${sr===ur?'the same number':'the same pattern'}.</p></div>`+
-      `<div class="step"><h4>3. Convert with the top bit</h4><div class="hood">`+weightsRow(w,true)+row(`${sr}`,pat,w,{top:true,val:`${sumText(pat,w,true)} = ${sr}`})+weightsRow(w,false)+row(`${ur}`,pat,w,{val:`${sumText(pat,w,false)} = ${ur}`})+`</div><p>${sr<0?`${sr} needs the top bit, worth −${half}, and then ${sr+half} more from the other bits.`:`${sr} is non-negative, so the top bit is 0 and the rest make ${sr}.`} The register holds <strong>${bits(pat,w)}</strong>, ${hex(pat,w)}.</p></div>`;
-  };
-  host.querySelectorAll('button[data-ab]').forEach(x=>x.addEventListener('click',()=>{ const [a,b]=x.dataset.ab.split(',').map(Number); inA.value=a; inB.value=b; render(); }));
-  host.querySelector('.rand').addEventListener('click',()=>{ const half=1<<(state.w-1); inA.value=rnd(2*half)-half; inB.value=rnd(2*half)-half; render(); });
-  [inA,inB].forEach(i=>i.addEventListener('change',render)); [inA,inB].forEach(i=>i.addEventListener('keydown',e=>{ if(e.key==='Enter') render(); }));
-  drills.push(render); render();
 })();
 
 })();

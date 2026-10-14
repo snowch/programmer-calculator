@@ -343,6 +343,26 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
 .hb.tap{cursor:pointer}
 .hb.tap:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .hood#brow{margin-bottom:-6px}
+.steps .step{margin:10px 0 4px}
+.steps h4{margin:6px 0 4px;font:600 .95rem var(--sans)}
+.steps .hood .hl{width:60px}
+svg.nl{width:100%;max-width:640px;height:auto;display:block;margin:4px 0}
+svg.nl .axis{stroke:var(--ink-2);stroke-width:1.5}
+svg.nl .tick{stroke:var(--ink-2);stroke-width:1}
+svg.nl .tk{font:10px var(--mono);fill:var(--ink-2)}
+svg.nl .band.s{fill:var(--rule)}
+svg.nl .band.u{fill:var(--bit-on);opacity:.55}
+svg.nl .dot.t{fill:var(--ink)}
+svg.nl .dot.s{fill:var(--ink-2)}
+svg.nl .dot.u{fill:var(--bit-on);stroke:var(--bit-on-ink);stroke-width:1}
+svg.nl .dl{font:600 11px var(--mono);fill:var(--ink)}
+svg.nl .shift{fill:none;stroke-width:2}
+svg.nl .shift.s{stroke:var(--ink-2)}
+svg.nl .shift.u{stroke:var(--carry)}
+svg.nl .sh{font:600 10px var(--mono)}
+svg.nl .sh.s{fill:var(--ink-2)}
+svg.nl .sh.u{fill:var(--carry)}
+
 
 </style>
 </head>
@@ -357,10 +377,10 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
     <button class="small themebtn" id="themeBtn" type="button">theme: auto</button>
   </div>
   <nav class="toc" aria-label="Sections">
-    <a href="#wrap">1 A byte wraps around</a><a href="#negate">2 Negating: NOT, then add 1</a><a href="#subtract">3 The adder does it</a><a href="#next">Where this leads</a>
+    <a href="#wrap">1 A byte wraps around</a><a href="#negate">2 Negating: NOT, then add 1</a><a href="#subtract">3 The adder does it</a><a href="#paper">4 On paper</a><a href="#next">Where this leads</a>
   </nav>
   <div class="row"><span>Width</span><button class="small" type="button" data-w="4" aria-pressed="true">4 bits</button><button class="small" type="button" data-w="8" aria-pressed="false">8 bits</button>
-    <span>Load</span><button class="small" type="button" data-preset="4,5,3">5 − 3</button><button class="small" type="button" data-preset="4,3,5">3 − 5</button><button class="small" type="button" data-preset="4,0,1">0 − 1</button><button class="small" type="button" data-preset="4,7,7">7 − 7</button><button class="small" type="button" data-preset="4,8,1">8 − 1</button><button class="small" type="button" data-preset="8,3,5">3 − 5 at 8 bits</button><button class="small" type="button" data-preset="8,128,1">0x80 − 1</button></div>
+    <span>Load</span><button class="small" type="button" data-preset="4,5,3">5 − 3</button><button class="small" type="button" data-preset="4,3,5">3 − 5</button><button class="small" type="button" data-preset="4,0,1">0 − 1</button><button class="small" type="button" data-preset="4,7,7">7 − 7</button><button class="small" type="button" data-preset="4,8,1">8 − 1</button><button class="small" type="button" data-preset="4,5,10">5 − (−6)</button><button class="small" type="button" data-preset="4,7,15">7 − (−1)</button><button class="small" type="button" data-preset="8,3,5">3 − 5 at 8 bits</button><button class="small" type="button" data-preset="8,128,1">0x80 − 1</button></div>
   <p class="tip">Every section on this page shows the same A − B. Change it here, or tap bits in section 3.</p>
 
   <section class="tut first" id="wrap">
@@ -386,6 +406,13 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
     <div class="hood" id="adder"></div>
     <p id="addTxt"></p>
     <p>That last point is where the carry flag comes from. If a carry comes out of the top bit, the adder reached 16 (or 256) and dropped it, which cancels the 16 we added with NOT B + 1, so the result is the plain difference and no borrow happened. If no carry comes out, the 16 is still in there: the result wrapped, because B was bigger than A. ARM and most other designs store this carry out as C, so after a subtraction <strong>C = 1 means no borrow, C = 0 means a borrow</strong>. x86 stores the opposite and calls it the borrow flag, but the circuit is the same.</p>
+  </section>
+
+  <section class="tut" id="paper">
+    <h2>4. The same subtraction on paper</h2>
+    <p>You do not have to think in bits to get the right pattern. Work in decimal, then fit the answer into the width, then convert. The adder above and this method always agree, because both are arithmetic on a wheel of 2<sup>n</sup> patterns; the method just does the wrap as one explicit step. The same A − B as the rest of the page, read as signed:</p>
+    <div class="steps" id="method"></div>
+    <p class="tip">On the number line, the grey band above the axis is the signed range and the amber band below it the unsigned range; the ticks mark their ends. The black dot is the true decimal answer; an arrow shows the shift of one wheel size when the answer has to be fitted. Both landings are the same bits.</p>
   </section>
 
   <section class="tut" id="next">
@@ -442,6 +469,26 @@ function bitRow(label,x,w,opts={}){
 function idxRow(w){ let h=`<div class="hrow"><span class="hl">bit</span>`+cell('','blank'); for(let i=w-1;i>=0;i--) h+=cell((i%8===7||i%8===0||i===w-1)?i:'','c'+gap(i)); return h+'<span class="hv"></span></div>'; }
 function carryRow(cin,w,label){ let h=`<div class="hrow"><span class="hl">${label||'carries'}</span>`+cell(cin[w],'c'+(cin[w]?' on':'')+' v'); for(let i=w-1;i>=0;i--) h+=cell(cin[i],('c'+(cin[i]?' on':'')+(i===w-1?' v':'')+gap(i)).trim()); return h+`<span class="hv">${w===4?'bit 0 gets the + 1':'bit 0 gets the + 1'}</span></div>`; }
 /* wheel: 16 positions, only drawn at 4 bits */
+const sumText=(x,w,S)=>{ const parts=[]; for(let i=w-1;i>=0;i--) if(bit(x,i)) parts.push(String((S&&i===w-1)?-(1<<i):(1<<i))); return parts.length?parts.join(' + ').replace('+ -','− '):'0'; };
+const weightsRow=(w,S)=>{ let h=`<div class="hrow"><span class="hl">worth</span>`+cell('','blank'); for(let i=w-1;i>=0;i--){ const wt=(S&&i===w-1)?-(1<<i):(1<<i); h+=cell(wt,'c'+gap(i)); } return h+'<span class="hv"></span></div>'; };
+function numberLine(w,t,sr,ur){
+  const n=1<<w, lo=-n, hi=2*n-1, W=640, H=132, pad=26, x=v=>pad+(v-lo)/(hi-lo)*(W-2*pad);
+  let s=`<svg viewBox="0 0 ${W} ${H}" class="nl" role="img" aria-label="number line showing ${t} fitted into ${w} bits"><line x1="${x(lo)}" y1="70" x2="${x(hi)}" y2="70" class="axis"/>`;
+  s+=`<rect x="${x(-(n>>1))}" y="58" width="${x((n>>1)-1)-x(-(n>>1))}" height="12" class="band s"/><rect x="${x(0)}" y="70" width="${x(n-1)-x(0)}" height="12" class="band u"/>`;
+  for(const v of [lo,-(n>>1),0,(n>>1)-1,n-1,hi]) s+=`<line x1="${x(v)}" y1="66" x2="${x(v)}" y2="86" class="tick"/><text x="${x(v)}" y="124" text-anchor="middle" class="tk">${v}</text>`;
+  const arrow=(from,to,cls,y,below)=>{ if(from===to) return ''; const mid=(x(from)+x(to))/2, d=below?1:-1; return `<path d="M ${x(from)} ${y} Q ${mid} ${y+d*34} ${x(to)} ${y}" class="shift ${cls}"/><text x="${mid}" y="${y+d*22+(below?4:0)}" text-anchor="middle" class="sh ${cls}">${to>from?'+':'−'}${n}</text>`; };
+  s+=arrow(t,sr,'s',62,false)+arrow(t,ur,'u',80,true);
+  s+=`<circle cx="${x(t)}" cy="70" r="6" class="dot t"/><text x="${x(t)}" y="${t!==sr?16:40}" text-anchor="middle" class="dl">true ${t}</text><circle cx="${x(sr)}" cy="64" r="5" class="dot s"/><circle cx="${x(ur)}" cy="76" r="5" class="dot u"/>`;
+  return s+'</svg>';
+}
+function paper(a,b,w){
+  const host=document.getElementById('method'); if(!host) return;
+  const n=1<<w, half=n>>1, sa=signed(a,w), sb=signed(b,w), t=sa-sb, pat=(a-b)&mask(w), sr=signed(pat,w), ur=pat, fitS=sr===t;
+  host.innerHTML=
+    `<div class="step"><h4>1. Compute in decimal</h4><p>Read as signed, A − B is ${sa} − ${sb<0?'('+sb+')':sb} = <strong>${t}</strong>. Read as unsigned it is ${a} − ${b} = ${a-b}; the two answers ${a-b===t?'agree':'differ by '+Math.abs((a-b)-t)+', a multiple of '+n+', which the next step removes anyway'}.</p></div>`+
+    `<div class="step"><h4>2. Fit it into ${w} bits</h4>${numberLine(w,t,sr,ur)}<p>${fitS?`${t} is already inside the signed range −${half} to ${half-1}, so it stays ${t}.`:`${t} is outside the signed range −${half} to ${half-1}, so ${t>0?'subtract':'add'} ${n}: ${t} ${t>0?'−':'+'} ${n} = <strong>${sr}</strong>. That is the wrap. The register cannot tell ${t} from ${sr}, and an ALU reports it with V = 1.`} Under the unsigned reading the same pattern must land in 0 to ${n-1}, which is <strong>${ur}</strong>${ur===a-b?'':`, from ${a-b} by adding ${n}: a borrow, C = 0`}. The two landings, ${sr} and ${ur}, are ${sr===ur?'the same number':'the same pattern'}.</p></div>`+
+    `<div class="step"><h4>3. Convert with the top bit</h4><div class="hood">`+weightsRow(w,true)+bitRow(`${sr}`,pat,w,{top:true,val:`${sumText(pat,w,true)} = ${sr}`})+weightsRow(w,false)+bitRow(`${ur}`,pat,w,{val:`${sumText(pat,w,false)} = ${ur}`})+`</div><p>${sr<0?`${sr} needs the top bit, worth −${half}, and then ${sr+half} more from the other bits.`:`${sr} is not negative, so the top bit is 0 and the rest make ${sr}.`} The register holds <strong>${pat.toString(2).padStart(w,'0')}</strong>, ${hex(pat,w)}, the same pattern the adder produced above.</p></div>`;
+}
 function wheel(a,b,w){
   const host=document.getElementById('wheel'); if(!host) return;
   if(w!==4){ host.innerHTML='<p class="tip">The wheel is drawn at 4 bits; at 8 bits it would need 256 positions. Switch the width to 4 to see it.</p>'; return; }
@@ -478,6 +525,7 @@ function render(){
   const add=document.getElementById('adder'); if(add){ add.innerHTML=idxRow(w)+carryRow(f.cin,w)+bitRow('A',a,w,{tap:'a',val:`${hex(a,w)} = ${a}`})+bitRow('NOT B',f.nb,w,{val:`${hex(f.nb,w)}, every bit of B flipped`}).replace('<span class="hl">NOT B</span>','<span class="hl">NOT B</span>')+bitRow('= A − B',f.res,w,{top:true,val:`${hex(f.res,w)} = ${f.res} unsigned, ${signed(f.res,w)} signed`})+
     `<div class="hflags"><span><b>C</b> = carry out of bit ${w-1} = <b>${f.c}</b>: ${f.c?'no borrow was needed':'a borrow was needed'}</span><span><b>N</b> = top bit = <b>${f.n}</b></span><span><b>Z</b> = all zero? <b>${f.z}</b></span><span><b>V</b> = carry into bit ${w-1} ≠ carry out = <b>${f.v}</b></span></div>`; }
   const bRow=document.getElementById('brow'); if(bRow) bRow.innerHTML=bitRow('B',b,w,{tap:'b',val:`${hex(b,w)} = ${b}; tap to change. The adder below sees NOT B`});
+  paper(a,b,w);
   const summary=document.getElementById('addTxt'); if(summary){ summary.innerHTML=`In words: ${a} + ${f.nb} + 1 = ${a+f.nb+1}. ${a+f.nb+1>=n?`That is ${n} or more, so the adder's carry out of bit ${w-1} is 1 and the ${n} is dropped, leaving ${f.res}. Dropping the ${n} undid the ${n} we added with NOT B + 1, so what remains is exactly ${a} − ${b}. C = 1: no borrow.`:`That is less than ${n}, so no carry comes out of bit ${w-1} and nothing is dropped: the result ${f.res} still contains the ${n} that NOT B + 1 added, which is the wrap-around from the wheel. C = 0: a borrow was needed, because ${a} is smaller than ${b}.`}`; }
 }
 document.querySelectorAll('button[data-w]').forEach(x=>x.addEventListener('click',()=>{ state.w=Number(x.dataset.w); render(); }));
