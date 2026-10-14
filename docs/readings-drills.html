@@ -446,9 +446,9 @@ svg.nl .sh.u{fill:var(--carry)}
 
   <section class="tut drill" id="d3">
     <h2>4. Step round the wheel</h2>
-    <p>A subtraction steps back round the wheel of patterns. Predict the pattern the register lands on, and what it reads as signed. When the steps pass zero the pattern wraps, and the signed reading is usually still the true answer.</p>
+    <p>A subtraction, with the operands printed under one stated reading. Use whatever method you like, decimal or bits, to predict the pattern the register lands on and what it reads as under that reading. Then say whether the true answer fitted: about two prompts in five are chosen so that it does not, which is where the wrap, and later the flags, come from.</p>
     <pre class="work prompt"></pre>
-    <div class="row answers"><label class="ans"><span>lands on</span><input class="bin" type="text" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="0000"></label><label class="ans"><span>signed</span><input class="sin" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0"></label></div>
+    <div class="row answers"><label class="ans"><span>lands on</span><input class="bin" type="text" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="0000"></label><label class="ans"><span class="rdlabel">reads as</span><input class="sin" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="0"></label><span class="ans"><span>true answer fitted?</span><button class="small" type="button" data-q="fit" data-v="1" aria-pressed="false">yes</button><button class="small" type="button" data-q="fit" data-v="0" aria-pressed="false">no</button></span></div>
     <div class="row"><button class="op check" type="button">Check</button><button class="small next" type="button">Next subtraction</button></div>
     <div class="feedback"></div>
   </section>
@@ -586,17 +586,26 @@ function wheelSvg(a,b,opts={}){
   wheelHost.addEventListener('keydown',e=>{ if(e.key!=='Enter'&&e.key!==' ') return; const g=e.target.closest&&e.target.closest('g.spoke.click'); if(!g) return; e.preventDefault(); g.dispatchEvent(new MouseEvent('click',{bubbles:true})); });
   host.querySelector('.next').addEventListener('click',next); drills.push(next); next();
 })();
-/* drill 3: step round the wheel */
+/* drill 3: step round the wheel, under a stated reading */
 (function(){
-  const host=document.getElementById('d3'); if(!host) return; const prompt=host.querySelector('.prompt'), fb=host.querySelector('.feedback'), inB=host.querySelector('.bin'), inS=host.querySelector('.sin');
-  let a,b,done=false;
-  const next=()=>{ const w=state.w, n=1<<w; a=rnd(n); b=rnd(n); if(Math.random()<0.6&&a>=b){ const t=a; a=b; b=t; } done=false; inB.value=''; inS.value=''; fb.innerHTML=''; prompt.textContent=`${a} − ${b}   (A = ${bits(a,w)}, B = ${bits(b,w)}, ${w} bits)`; };
-  host.querySelector('.check').addEventListener('click',()=>{ const w=state.w, n=1<<w, r=(a-b)&mask(w); const got=parseBits(inB.value,w); if(got===null||inS.value.trim()===''){ fb.innerHTML=`<p class="tip">Type the ${w}-bit landing pattern and its signed reading.</p>`; return; }
-    const okB=got===r, okS=Number(inS.value)===signed(r,w), ok=okB&&okS; if(!done){ bump('wheel',ok); done=true; }
-    const wrapped=a-b<0;
-    fb.innerHTML=`<p>${mark(ok)} ${a} − ${b} lands on <strong>${bits(r,w)}</strong>${okB?'':' ✗'}, which reads as <strong>${r}</strong> unsigned and <strong>${signed(r,w)}</strong> signed${okS?'':' ✗'}.</p>`+
-      `<p>${wrapped?`${a} − ${b} = ${a-b} is below zero, so counting back ${b} step${b===1?'':'s'} from ${a} passes 0 and continues from ${n-1}: the register holds ${a-b} + ${n} = ${r}. Read as signed, that pattern is ${signed(r,w)}${signed(r,w)===a-b?', the true answer':', which is not the true answer: the true answer '+(a-b)+' is outside the signed range'}.`:`${a} − ${b} = ${a-b} stays at or above zero, so nothing wraps and the pattern is ${bits(r,w)} under both readings${signed(r,w)===a-b?'':', although read as signed it is '+signed(r,w)+' because the top bit is set'}.`}</p>`+
-      (w===4?`<div class="wheelwrap"><div>${wheelSvg(a,b)}</div><p class="tip">Amber dot: A. Red arc: B steps back. Red dot: where the register lands.</p></div>`:'');
+  const host=document.getElementById('d3'); if(!host) return; const prompt=host.querySelector('.prompt'), fb=host.querySelector('.feedback'), inB=host.querySelector('.bin'), inS=host.querySelector('.sin'), rdLabel=host.querySelector('.rdlabel');
+  let a,b,S,done=false;
+  const bind=name=>host.querySelectorAll(`button[data-q="${name}"]`).forEach(x=>x.addEventListener('click',()=>{ host.querySelectorAll(`button[data-q="${name}"]`).forEach(o=>o.setAttribute('aria-pressed','false')); x.setAttribute('aria-pressed','true'); }));
+  bind('fit'); const ans=name=>{ const x=host.querySelector(`button[data-q="${name}"][aria-pressed="true"]`); return x?x.dataset.v:null; };
+  const val=(x,w)=>S?signed(x,w):x;
+  const next=()=>{ const w=state.w, n=1<<w, half=n>>1; S=Math.random()<0.5;
+    // aim for an out-of-range true answer about 40% of the time
+    const wantOut=Math.random()<0.4;
+    for(let tries=0;tries<60;tries++){ a=rnd(n); b=rnd(n); const t=val(a,w)-val(b,w); const outside=S?(t<-half||t>half-1):(t<0); if(outside===wantOut) break; }
+    done=false; inB.value=''; inS.value=''; fb.innerHTML=''; host.querySelectorAll('button[data-q]').forEach(o=>o.setAttribute('aria-pressed','false'));
+    const fmt=x=>x<0?`(${x})`:String(x);
+    prompt.textContent=`${fmt(val(a,w))} − ${fmt(val(b,w))}   read as ${S?'signed':'unsigned'}   (A = ${bits(a,w)}, B = ${bits(b,w)}, ${w} bits)`; rdLabel.textContent=S?'reads as signed':'reads as unsigned'; };
+  host.querySelector('.check').addEventListener('click',()=>{ const w=state.w, n=1<<w, half=n>>1, r=(a-b)&mask(w), t=val(a,w)-val(b,w), landed=val(r,w), fit=landed===t;
+    const got=parseBits(inB.value,w); const f=ans('fit'); if(got===null||inS.value.trim()===''||f===null){ fb.innerHTML=`<p class="tip">Type the ${w}-bit landing pattern, its ${S?'signed':'unsigned'} reading, and say whether the true answer fitted.</p>`; return; }
+    const okB=got===r, okS=Number(inS.value)===landed, okF=(f==='1')===fit, ok=okB&&okS&&okF; if(!done){ bump('wheel',ok); done=true; }
+    fb.innerHTML=`<p>${mark(ok)} ${val(a,w)} − ${val(b,w)} = ${t}. The register lands on <strong>${bits(r,w)}</strong>${okB?'':' ✗'}, which reads as <strong>${landed}</strong> ${S?'signed':'unsigned'}${okS?'':' ✗'}. ${fit?`That is the true answer: it fitted.`:`That is not ${t}: the true answer is outside the ${S?'signed range −'+half+' to '+(half-1):'unsigned range 0 to '+(n-1)}, so it wrapped by ${n}, and ${S?'an ALU would set V = 1':'an ALU would set C = 0, meaning a borrow'}.`}${okF?'':' ✗ on the fit question.'}</p>`+
+      `<p>${t<0&&!S?`Counting back ${b} step${b===1?'':'s'} from ${a} passes 0 and continues from ${n-1}: the register holds ${t} + ${n} = ${r}.`:t>half-1&&S?`${t} is above ${half-1}, the largest signed value, so it comes out as ${t} − ${n} = ${landed}.`:t<-half&&S?`${t} is below −${half}, the smallest signed value, so it comes out as ${t} + ${n} = ${landed}.`:`Nothing wrapped. Under the other reading the same pattern is ${S?r+' unsigned':signed(r,w)+' signed'}.`}</p>`+
+      (w===4?`<div class="wheelwrap"><div>${wheelSvg(a,b)}</div><p class="tip">Amber dot: A. Red arc: B steps back as the hardware does it, pattern by pattern. Red dot: where the register lands.</p></div>`:'');
   });
   host.querySelector('.next').addEventListener('click',next); enterChecks(host); drills.push(next); next();
 })();
