@@ -398,11 +398,11 @@ svg.nl .sh.u{fill:var(--carry)}
 
   <section class="tut" id="negate">
     <h2>2. Negating: NOT, then add 1</h2>
-    <div class="row"><span>Width</span><button class="small" type="button" data-w="4" aria-pressed="true">4 bits</button><button class="small" type="button" data-w="8" aria-pressed="false">8 bits</button><span>Negate</span><button class="small" type="button" data-b="3">3</button><button class="small" type="button" data-b="5">5</button><button class="small" type="button" data-b="1">1</button><button class="small" type="button" data-b="7">7</button><button class="small" type="button" data-b="0">0</button><button class="small" type="button" data-b="8">8, the one that cannot be</button><button class="small" type="button" data-b="128" data-bw="8">0x80 at 8 bits</button></div>
+    <div class="row"><span>Width</span><button class="small" type="button" data-w="4" aria-pressed="true">4 bits</button><button class="small" type="button" data-w="8" aria-pressed="false">8 bits</button><span>Negate, as signed</span><button class="small" type="button" data-b="3">3</button><button class="small" type="button" data-b="5">5</button><button class="small" type="button" data-b="1">1</button><button class="small" type="button" data-b="7">7</button><button class="small" type="button" data-b="13" data-bw="4">−3</button><button class="small" type="button" data-b="15" data-bw="4">−1</button><button class="small" type="button" data-b="0">0</button><button class="small" type="button" data-b="8" data-bw="4">−8, the one that cannot be</button><button class="small" type="button" data-b="128" data-bw="8">−128 at 8 bits</button></div>
     <p>Stepping back B places is the same as stepping forward by the wheel's size minus B. At 4 bits, subtracting 5 is adding 11. At 8 bits, subtracting 5 is adding 251. So if the circuit can make 16 − B, or 256 − B, from B, it can subtract with nothing but an adder.</p>
     <p>Inverting every bit of B gives 15 − B at 4 bits (255 − B at 8), because each column that held a 1 now holds a 0 and vice versa, and all-ones is 15. Adding 1 more makes it 16 − B, exactly the number to add. That is the whole trick: <strong>−B = NOT B + 1</strong>.</p>
     <div class="hood" id="neg"></div>
-    <p class="tip">Tap a bit of B to negate any value. This section uses only B; A comes back in section 3.</p>
+    <p class="tip">Negation is a signed idea: NOT B + 1 is −B under the signed reading. Under the unsigned reading the same pattern is simply 16 − B (or 256 − B), the number you add to subtract B. Tap a bit of B to try any value. This section uses only B; A comes back in section 3.</p>
   </section>
 
   <section class="tut" id="subtract">
