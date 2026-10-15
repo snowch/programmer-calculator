@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Where C meets the wheel</title>
+<meta name="description" content="Seven C integer traps, each stepped through in ARM assembly with 8-bit registers and the N Z C V flags drawn before and after: the unsigned countdown, 127 + 1, narrowing, negating INT_MIN, parsing it, detecting a wrap, and %d versus %u.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script>try{var t=localStorage.getItem("bitlab-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --paper:#EDF0EA;
+  --paper-2:#E2E7DF;
+  --paper-3:#F6F8F4;
+  --ink:#1B2620;
+  --ink-2:#4F5E57;
+  --rule:#C3CBC0;
+  --wire-off:#B4BDB2;
+  --wire-on:#E09B1A;
+  --wire-on-2:#F6C860;
+  --carry:#B23A2C;
+  --gate-fill:#F8FAF6;
+  --gate-stroke:#2D3B35;
+  --bit-off:#D7DDD3;
+  --bit-on:#F1B23A;
+  --bit-on-ink:#2B1E05;
+  --led-on:#D9471F;
+  --led-off:#C9D0C5;
+  --na:#98A39C;
+  --focus:#2F6FD1;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#131A16;
+    --paper-2:#1B241F;
+    --paper-3:#232E28;
+    --ink:#E6ECE4;
+    --ink-2:#9AA89F;
+    --rule:#2E3B34;
+    --wire-off:#3A4740;
+    --wire-on:#F0B23C;
+    --wire-on-2:#FFD98A;
+    --carry:#E86A55;
+    --gate-fill:#1F2A24;
+    --gate-stroke:#C9D4CC;
+    --bit-off:#26312B;
+    --bit-on:#F0B23C;
+    --bit-on-ink:#2B1E05;
+    --led-on:#FF6A3D;
+    --led-off:#2A3630;
+    --na:#5C6A62;
+    --focus:#7FA9F0;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131A16; --paper-2:#1B241F; --paper-3:#232E28; --ink:#E6ECE4; --ink-2:#9AA89F; --rule:#2E3B34;
+  --wire-off:#3A4740; --wire-on:#F0B23C; --wire-on-2:#FFD98A; --carry:#E86A55;
+  --gate-fill:#1F2A24; --gate-stroke:#C9D4CC; --bit-off:#26312B; --bit-on:#F0B23C;
+  --bit-on-ink:#2B1E05; --led-on:#FF6A3D; --led-off:#2A3630; --na:#5C6A62; --focus:#7FA9F0;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:inherit}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:16px;line-height:1.55;
+  -webkit-text-size-adjust:100%;
+}
+main{max-width:980px;margin:0 auto;padding:20px 16px 56px}
+code,kbd,.mono{font-family:var(--mono)}
+button{font:inherit;color:inherit}
+a{color:var(--ink)}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+h1{font-size:clamp(1.55rem,1.1rem + 1.6vw,2.1rem);font-weight:600;margin:0 0 6px;letter-spacing:-.015em;line-height:1.15}
+.lede{color:var(--ink-2);margin:0 0 12px;max-width:62ch;font-size:1.05rem}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.meta span{font:500 .78rem/1.6 var(--mono);border:1px solid var(--rule);border-radius:999px;padding:1px 10px;color:var(--ink-2)}
+.themebtn{flex:none;margin-top:4px}
+nav.toc{display:flex;flex-wrap:wrap;gap:4px 6px;margin:0 0 26px;padding:8px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+nav.toc a{font:500 .84rem var(--mono);color:var(--ink-2);text-decoration:none;padding:3px 9px;border-radius:6px}
+nav.toc a:hover{color:var(--ink);background:var(--paper-2)}
+
+/* ---------- prose sections ---------- */
+.tut{margin-top:36px;border-top:1px solid var(--rule);padding-top:22px}
+.tut h2{font-size:1.4rem;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.2}
+.tut h3{font-size:1.02rem;font-weight:600;margin:20px 0 6px}
+.tut p,.tut li{max-width:70ch}
+.tut p{margin:0 0 12px}
+.tut ul,.tut ol{padding-left:22px;margin:0 0 12px}
+.tut li{margin-bottom:5px}
+.tut strong{font-weight:600}
+.tut code{background:var(--paper-2);padding:1px 5px;border-radius:4px;font-size:.88em}
+.tut table{border-collapse:collapse;font-size:.9rem;margin:8px 0 14px;font-variant-numeric:tabular-nums}
+.tut td,.tut th{border:1px solid var(--rule);padding:5px 11px;text-align:left;vertical-align:top}
+.tut th{background:var(--paper-2);font-weight:600}
+.tut td.mono{font-family:var(--mono);font-size:.86rem}
+pre.work{font:.86rem/1.55 var(--mono);background:var(--paper-2);border:1px solid var(--rule);border-radius:8px;padding:10px 14px;overflow-x:auto;margin:8px 0 14px}
+.check{border-left:3px solid var(--wire-on);padding:2px 0 2px 14px;margin:14px 0}
+.check ol{margin-bottom:6px}
+.steps{list-style:none;padding:0;counter-reset:step}
+.steps>li{position:relative;padding-left:36px;margin-bottom:14px;max-width:72ch}
+.steps>li::before{
+  counter-increment:step;content:counter(step);position:absolute;left:0;top:2px;
+  width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--paper);
+  font:600 .8rem/24px var(--mono);text-align:center;
+}
+
+/* ---------- schematic ---------- */
+figure.schem{margin:10px 0 18px;background:var(--paper-2);border:1px solid var(--rule);border-radius:12px;padding:10px 8px 8px;overflow-x:auto}
+figure.schem svg{display:block;width:100%;min-width:680px;max-width:800px;height:auto;margin:0 auto}
+figure.schem figcaption{font-size:.84rem;color:var(--ink-2);margin:8px 6px 0;text-align:center;line-height:1.4}
+.schem .box{fill:var(--gate-fill);stroke:var(--gate-stroke);stroke-width:1.5}
+.schem .opt{stroke-dasharray:5 4}
+.schem .bus{stroke:var(--wire-on);stroke-width:3;fill:none;stroke-linejoin:round}
+.schem .sig{stroke:var(--ink-2);stroke-width:1.6;fill:none}
+.schem .ctl{stroke:var(--ink-2);stroke-width:1.6;fill:none;stroke-dasharray:4 3;stroke-linejoin:round}
+.schem .cy{stroke:var(--carry);stroke-width:2.2;fill:none}
+.schem .fb{stroke:var(--focus);stroke-width:2;fill:none;stroke-dasharray:6 4;stroke-linejoin:round}
+.schem .dot{fill:var(--wire-on)}
+.schem .dotf{fill:var(--focus)}
+.schem .tick{stroke:var(--ink-2);stroke-width:1.4}
+.schem text{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+.schem .t2{fill:var(--ink-2);font-size:10px}
+.schem .tc{fill:var(--carry);font-weight:600}
+.schem .tf{fill:var(--focus)}
+.schem .badge circle{fill:var(--ink);stroke:var(--paper);stroke-width:1.5}
+.schem .badge text{fill:var(--paper);font-weight:600;font-size:10px}
+.schem .led{fill:var(--led-off);stroke:var(--rule);stroke-width:1}
+.schem .led.lit{fill:var(--led-on);stroke:var(--led-on)}
+
+/* ---------- the lab ---------- */
+.labwrap{margin-top:16px}
+.ops{display:flex;flex-wrap:wrap;gap:8px 20px;margin-bottom:12px}
+.opgroup{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.opcap{font:500 .7rem var(--mono);text-transform:uppercase;letter-spacing:.09em;color:var(--ink-2);margin-right:2px}
+.op{
+  font:500 .9rem var(--mono);border:1px solid var(--rule);background:var(--paper-2);border-radius:8px;
+  padding:6px 11px;cursor:pointer;
+}
+.op:hover{border-color:var(--ink-2)}
+.op[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.op:focus-visible,.small:focus-visible,.preset:focus-visible,.load:focus-visible,.themebtn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;color:var(--ink-2);margin-bottom:12px;font:.84rem var(--mono)}
+.small{border:1px solid var(--rule);background:transparent;border-radius:6px;padding:3px 9px;cursor:pointer;font:500 .84rem var(--mono);color:var(--ink)}
+.small:hover{border-color:var(--ink-2)}
+.small[aria-pressed="true"]{background:var(--ink-2);color:var(--paper);border-color:var(--ink-2)}
+.circuit{
+  background:var(--paper-2);border:1px solid var(--rule);border-radius:12px;
+  padding:10px 8px 6px;overflow-x:auto;
+}
+.circuit svg{display:block;width:100%;height:auto;max-width:760px;margin:0 auto}
+svg text{font-family:var(--mono);fill:var(--ink)}
+.wire{stroke:var(--wire-off);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:stroke .15s}
+.wire.on{stroke:var(--wire-on)}
+.wire.carry.on{stroke:var(--carry)}
+.gate{fill:var(--gate-fill);stroke:var(--gate-stroke);stroke-width:1.8}
+.bit{cursor:pointer}
+.bit rect{fill:var(--bit-off);stroke:var(--rule);stroke-width:1;transition:fill .12s}
+.bit.on rect{fill:var(--bit-on);stroke:var(--bit-on)}
+.bit text{font-weight:600;font-size:15px;pointer-events:none}
+.bit.on text{fill:var(--bit-on-ink)}
+.bit:focus{outline:none}
+.bit:focus-visible rect{stroke:var(--focus);stroke-width:2.5}
+.bit.ro{cursor:default}
+.bit.ro rect{stroke-dasharray:3 2}
+.lab{font-size:11px;fill:var(--ink-2)}
+.lab.sm{font-size:10px}
+.idx{font-size:9.5px;fill:var(--ink-2)}
+.cv{font-size:10.5px;font-weight:600}
+.cv.on{fill:var(--carry)}
+.cv.off{fill:var(--ink-2)}
+.fv{font-size:10.5px;font-weight:600}
+.fv.on{fill:var(--wire-on)}
+.fv.off{fill:var(--ink-2)}
+.cnst{font-size:11px;fill:var(--ink-2)}
+.tip{color:var(--ink-2);font-size:.82rem;margin:8px 0 0}
+
+.values{margin:16px 0 4px;overflow-x:auto}
+.values table{border-collapse:collapse;font:.9rem var(--mono);font-variant-numeric:tabular-nums;width:100%;max-width:600px}
+.values th{text-align:left;color:var(--ink-2);font-weight:500;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;padding:4px 14px 4px 0}
+.values th.num,.values td.num{text-align:right}
+.values td{padding:5px 14px 5px 0;border-top:1px solid var(--rule);white-space:nowrap}
+.values th.rowk{color:var(--ink);font-weight:600;font-size:.9rem;text-transform:none;letter-spacing:0;border-top:1px solid var(--rule)}
+.values td.bin{font-weight:600;letter-spacing:.04em}
+.values tr.r td,.values tr.r th{background:var(--paper-3)}
+
+.flags{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px;margin-top:14px}
+.flag{border:1px solid var(--rule);border-radius:12px;padding:12px 14px;background:var(--paper-2)}
+.flag header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.led{width:14px;height:14px;border-radius:50%;background:var(--led-off);border:1px solid var(--rule);flex:none;transition:background .15s,box-shadow .15s}
+.led.on{background:var(--led-on);border-color:var(--led-on);box-shadow:0 0 0 3px color-mix(in srgb,var(--led-on) 25%,transparent)}
+.led.na{background:transparent;border-style:dashed;border-color:var(--na)}
+.flag h3{margin:0;font:600 1rem var(--mono)}
+.flag h3 span{color:var(--ink-2);font-weight:400;font-size:.85rem;margin-left:6px}
+.flag svg{width:100%;max-width:240px;height:auto;display:block;margin:2px 0 8px;overflow:visible}
+.flag p{margin:0;font-size:.88rem;color:var(--ink-2);line-height:1.45}
+.flag p strong{color:var(--ink);font-weight:600}
+.flag.na{opacity:.72}
+.why{margin-top:18px;border-top:1px solid var(--rule);padding-top:12px}
+.why h2{font:600 1rem var(--mono);margin:0 0 6px}
+.why p{margin:0 0 8px;max-width:70ch;font-size:.95rem}
+.presets{margin-top:22px}
+.presets h2{font-size:1rem;margin:0 0 8px;font-weight:600}
+#presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}
+.preset{
+  display:block;text-align:left;border:1px solid var(--rule);background:transparent;
+  border-radius:8px;padding:8px 10px;cursor:pointer;font:500 .86rem var(--mono);
+}
+.preset:hover{background:var(--paper-2);border-color:var(--ink-2)}
+.preset span{display:block;color:var(--ink-2);font:.84rem var(--sans);margin-top:2px}
+
+/* ---------- exercises & quiz ---------- */
+.ex{border:1px solid var(--rule);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:var(--paper-2)}
+.ex h3{font-size:1rem;margin:0 0 8px;font-weight:600}
+.ex p{margin:0 0 8px}
+.ex .load{font:500 .84rem var(--mono);border:1px solid var(--ink);background:transparent;border-radius:6px;padding:4px 10px;cursor:pointer;margin-bottom:10px}
+.ex .load:hover{background:var(--ink);color:var(--paper)}
+details{margin-top:6px}
+summary{cursor:pointer;color:var(--ink-2);font:500 .84rem var(--mono);display:inline-block;padding:2px 9px;border:1px solid var(--rule);border-radius:6px;list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"\25B8  "}
+details[open] summary::before{content:"\25BE  "}
+summary:hover{color:var(--ink);border-color:var(--ink-2)}
+details p{margin:8px 0 0;color:var(--ink);font-size:.93rem}
+.lab-anchor{scroll-margin-top:12px}
+
+/* ---------- footer ---------- */
+footer.site{margin-top:44px;border-top:1px solid var(--rule);padding-top:14px;font:.84rem var(--mono);color:var(--ink-2);display:flex;flex-wrap:wrap;gap:6px 20px}
+footer.site a{color:var(--ink-2)}
+footer.site a:hover{color:var(--ink)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* ---------- block diagram & full adder widget ---------- */
+svg.blockdiag{width:100%;max-width:420px;height:auto;display:block;margin:6px 0 14px}
+.fawrap{display:grid;grid-template-columns:minmax(240px,370px) minmax(0,1fr);gap:14px 26px;align-items:start;margin:10px 0 16px}
+@media (max-width:640px){.fawrap{grid-template-columns:minmax(0,1fr)}}
+.fa{background:var(--paper-2);border:1px solid var(--rule);border-radius:12px;padding:8px 6px}
+.fa svg{display:block;width:100%;height:auto}
+.jdot{fill:var(--wire-off)}
+.jdot.on{fill:var(--wire-on)}
+.jdot.carry.on{fill:var(--carry)}
+.faeq{font:.9rem/1.5 var(--mono);margin:0 0 10px}
+table.truth{border-collapse:collapse;font:.86rem var(--mono);font-variant-numeric:tabular-nums;margin:0 0 8px}
+table.truth th,table.truth td{border:1px solid var(--rule);padding:3px 11px;text-align:center}
+table.truth th{background:var(--paper-2);font-weight:600}
+table.truth tr.cur td{background:var(--bit-on);color:var(--bit-on-ink);font-weight:600}
+.clk{fill:none;stroke:var(--gate-stroke);stroke-width:1.5}
+
+/* ---------- 4-bit chain widget ---------- */
+.chainwrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:640px){.chainwrap{grid-template-columns:minmax(0,1fr)}}
+#chainTable{overflow-x:auto}
+table.add th,table.add td{padding:3px 8px}
+.gate.sel{stroke:var(--focus);stroke-width:2.6}
+.fabox{cursor:pointer}
+.bit.wait rect{fill:transparent;stroke:var(--na);stroke-dasharray:3 2}
+.bit.wait text{fill:var(--na)}
+table.add td.k{text-align:left;color:var(--ink-2);font-size:.8rem;white-space:nowrap}
+table.add td.cin{color:var(--carry);font-weight:600}
+table.add tr.sum td{border-top:2px solid var(--ink-2);font-weight:600}
+table.add td.q{color:var(--na)}
+
+/* ---------- CMP and the branches ---------- */
+.asmwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 24px;margin:4px 0 10px}
+@media (max-width:760px){.asmwrap{grid-template-columns:minmax(0,1fr)}}
+.asmwrap h3{margin:8px 0 4px}
+table.asm{width:100%}
+table.asm td{text-align:left;padding:3px 8px}
+table.asm td.mn{font-weight:600}
+table.asm td.k{color:var(--ink-2)}
+table.asm tr.take td{background:var(--bit-on);color:var(--bit-on-ink)}
+table.asm tr.take td.k{color:var(--bit-on-ink)}
+
+/* ---------- the same thing as a program ---------- */
+.asmprog{margin:0 0 6px;white-space:pre}
+.asmprog .ln{display:block;opacity:.5;padding:0 6px;margin:0 -6px;border-radius:4px}
+.asmprog .ln.run{opacity:1;background:var(--bit-on);color:var(--bit-on-ink)}
+.asmprog .cm{color:var(--ink-2)}
+.asmprog .ln.run .cm{color:var(--bit-on-ink);opacity:.8}
+ol.trace{margin:4px 0 14px;padding-left:22px}
+ol.trace li{margin:0 0 4px}
+
+/* ---------- under the hood ---------- */
+.hood{background:var(--paper-2);border:1px solid var(--rule);border-radius:8px;padding:8px 14px 4px;overflow-x:auto;margin:8px 0 14px;font:.8rem var(--mono);font-variant-numeric:tabular-nums}
+.hood h4{margin:8px 0 6px;font:600 .86rem var(--sans)}
+.hood h4+ .hrow .hb.c{color:var(--ink-2);font-size:9px}
+.hrow{display:flex;align-items:center;white-space:nowrap;margin:2px 0}
+.hrow .hl{width:132px;flex:none;color:var(--ink-2)}
+.hrow .hv{margin-left:12px;color:var(--ink-2);white-space:normal;flex:1 1 auto;min-width:22ch;line-height:1.35}
+.hrow{align-items:flex-start}
+.hrow .hl,.hrow .hb{margin-top:1px}
+.hb{display:inline-flex;width:15px;height:17px;flex:none;align-items:center;justify-content:center;border:1px solid var(--rule);background:var(--bit-off);font-weight:600;font-size:10.5px;margin-right:1px;border-radius:2px;color:var(--ink)}
+.hb.on{background:var(--bit-on);border-color:var(--bit-on);color:var(--bit-on-ink)}
+.hb.fill{border:1px dashed var(--ink-2)}
+.hb.fill.on{border-color:var(--bit-on-ink)}
+.hb.gap{margin-right:7px}
+.hb.blank{visibility:hidden}
+.hb.c{background:transparent;border-color:transparent;color:var(--ink-2);font-weight:500}
+.hb.c.on{color:var(--carry);font-weight:700}
+.hb.c.v{border-color:var(--carry);border-style:dashed}
+.hb.top{box-shadow:0 0 0 2px var(--carry) inset}
+.hflags{display:flex;flex-wrap:wrap;gap:4px 18px;margin:8px 0 2px;color:var(--ink-2)}
+.hflags b{color:var(--ink)}
+.hnote{color:var(--ink-2);font:.82rem/1.5 var(--sans);margin:6px 0 10px;white-space:normal}
+.hnote code{background:var(--paper);padding:1px 5px;border-radius:4px}
+
+
+.crumbs{font:.84rem var(--mono);color:var(--ink-2);margin:0 0 14px}
+.crumbs a{color:var(--ink-2)}
+.crumbs a:hover{color:var(--ink)}
+.tut.first{margin-top:26px;border-top:0;padding-top:0}
+nav.toc + .tut.first{margin-top:0}
+nav.pager{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:34px 0 0;padding:14px 0;border-top:1px solid var(--rule);font:.9rem var(--sans)}
+nav.pager a{color:var(--ink);text-decoration:none;border:1px solid var(--rule);border-radius:8px;padding:8px 12px}
+nav.pager a:hover{border-color:var(--ink-2)}
+nav.pager .next{text-align:right}
+nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
+@media (max-width:640px){nav.pager{grid-template-columns:1fr}nav.pager .next{text-align:left}}
+
+.csrc{font-size:.9rem}
+.trace .ctl{margin:6px 0}
+.trace .pos{color:var(--ink-2)}
+.asmprog .ln.done{opacity:.8}
+.hflags.chg{background:var(--bit-on);color:var(--bit-on-ink);border-radius:6px;padding:4px 8px}
+.hflags.chg b{color:var(--bit-on-ink)}
+.trace .note{min-height:2.4em}
+.trace .regs .hl{width:36px}
+
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <p class="crumbs"><a href="notes.html" title="From gates to a compiled if: contents">Home</a> · side trip</p>
+      <h1>Where C meets the wheel</h1>
+      <p class="lede">Seven small C programs that go wrong at the edge of the range, stepped through one instruction at a time with the registers drawn as bits before and after, so you can see the wrap the language calls undefined.</p>
+    </div>
+    <button class="small themebtn" id="themeBtn" type="button">theme: auto</button>
+  </div>
+  <nav class="toc" aria-label="Scenarios">
+    <a href="#s1">1 The loop that never ends</a><a href="#s2">2 127 + 1</a><a href="#s3">3 200 into an int8_t</a><a href="#s4">4 −(−128)</a><a href="#s5">5 Parsing −128</a><a href="#s6">6 Detecting a wrap in C</a><a href="#s7">7 %d and %u</a><a href="#how">Reading these</a>
+  </nav>
+  <p class="tip">Every scenario is at 8 bits with <code>int8_t</code> and <code>uint8_t</code>, so every bit is on screen. The same things happen at 32 bits with <code>int</code> and <code>unsigned</code>; the 32-bit numbers are named where they differ. The assembly is ARM. Step through each one and watch the registers and flags; changed bits are outlined.</p>
+  <section class="tut first scen" id="s1">
+    <h2>1. The loop that never ends</h2>
+    <pre class="work csrc">uint8_t i;
+for (i = n - 1; i >= 0; i--)
+    a[i] = 0;</pre>
+    <p>Counting down with an unsigned index. The programmer means "stop after 0", but 0 − 1 under the unsigned reading is 255, and 255 ≥ 0.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+  <section class="tut scen" id="s2">
+    <h2>2. 127 + 1</h2>
+    <pre class="work csrc">int8_t x = 127;
+x = x + 1;</pre>
+    <p>The largest signed value plus one. Under the unsigned reading 128 fits; under the signed reading it does not, and the register ends up reading as −128.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+  <section class="tut scen" id="s3">
+    <h2>3. 200 into an int8_t</h2>
+    <pre class="work csrc">int v = 200;
+int8_t x = v;</pre>
+    <p>No arithmetic at all. A wider value is stored into a narrower variable, and the bits that remain are read with the top one worth −128.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+  <section class="tut scen" id="s4">
+    <h2>4. −(−128)</h2>
+    <pre class="work csrc">int8_t x = -128;
+int8_t y = -x;   // or abs(x)</pre>
+    <p>The one pattern that cannot be negated, from section 2 of the subtraction page, as it happens in a program that expects a positive result.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+  <section class="tut scen" id="s5">
+    <h2>5. Parsing −128</h2>
+    <pre class="work csrc">// read digits as positive, negate at the end
+int8_t acc = 0;
+for each digit d: acc = acc * 10 + d;
+return negative ? -acc : acc;</pre>
+    <p>The natural way to write a number parser, and the value that breaks it: the positive form of the most negative number never fits.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+  <section class="tut scen" id="s6">
+    <h2>6. Detecting a wrap in C</h2>
+    <pre class="work csrc">uint8_t a = 3, b = 5;
+uint8_t d = a - b;
+if (d > a) /* wrapped */</pre>
+    <p>C cannot read the carry flag, so the idiom asks a question whose answer can only be yes if the wheel was crossed.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+  <section class="tut scen" id="s7">
+    <h2>7. %d and %u</h2>
+    <pre class="work csrc">int8_t x = -2;
+printf("%d", x);   // -2
+printf("%u", x);   // 254</pre>
+    <p>The same register printed under both readings. Nothing is computed; the format string chooses what the top bit is worth.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+
+  <section class="tut" id="how">
+    <h2>Reading these</h2>
+    <ul>
+      <li>Each trace runs on a machine with four 8-bit registers and the N Z C V flags, computed the way the <a href="bit-lab.html">Bit Lab</a> does it: subtraction is A + NOT B + 1, C is the carry out of the top bit, V is the carry into the top bit XOR the carry out.</li>
+      <li>Outlined cells changed in the last step. The flags row is highlighted when the last instruction set the flags; ARM instructions only do so when asked, which is the trailing <code>S</code> on <code>SUBS</code> and <code>ADDS</code>.</li>
+      <li>Where C says "undefined behaviour", the hardware still does something definite, and these traces show it. The catch is that the compiler is allowed to assume the undefined case never happens and may have rearranged the code before it reached the machine, so what you observe can differ from the trace and from run to run. Compile with <code>-fsanitize=undefined</code> to be told when a trace like these is happening in your program.</li>
+      <li>To see the real instructions for your own C, paste it into <a href="https://godbolt.org/">Compiler Explorer</a> with an ARM GCC at <code>-O1</code>.</li>
+    </ul>
+  </section>
+
+  <nav class="pager" aria-label="Series navigation"><a class="prev" href="gates-to-register.html">Previous: From gates to a register</a><a class="up" href="notes.html">Contents</a><a class="next" href="notes.html">Back to the contents</a></nav>
+  <footer class="site">
+    <a href="notes.html">From gates to a compiled if: contents</a>
+    <a href="../">Programmer Calculator app</a>
+    <a href="twos-complement.pdf">Two's complement tutorial (PDF)</a>
+  </footer>
+</main>
+<script>
+(function(){
+'use strict';
+/* ---------- theme ---------- */
+(function(){
+  const btn=document.getElementById('themeBtn'); if(!btn) return;
+  const THEMES=['auto','light','dark'];
+  let theme='auto'; try{ theme=localStorage.getItem('bitlab-theme')||'auto'; }catch(e){}
+  if(!THEMES.includes(theme)) theme='auto';
+  const apply=()=>{
+    if(theme==='auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme',theme);
+    btn.textContent='theme: '+theme; btn.setAttribute('aria-label','Theme: '+theme+'. Activate to change');
+  };
+  apply();
+  btn.addEventListener('click',()=>{ theme=THEMES[(THEMES.indexOf(theme)+1)%THEMES.length]; try{localStorage.setItem('bitlab-theme',theme);}catch(e){} apply(); });
+})();
+
+
+/* ---------- where C meets the wheel: stepped register traces ---------- */
+const W=8, M=0xFF;
+const bit=(x,i)=>(x>>>i)&1;
+const signed=x=>bit(x,7)?x-256:x;
+const hex=x=>'0x'+x.toString(16).toUpperCase().padStart(2,'0');
+const bits=x=>x.toString(2).padStart(8,'0');
+const cell=(t,cls)=>`<span class="hb${cls?' '+cls:''}">${t}</span>`;
+/* the tiny machine: 8-bit registers R0..R3, flags N Z C V */
+function alu(op,a,b){ // returns {r, n,z,c,v}
+  let r,c,v;
+  if(op==='add'||op==='sub'){ const bb=op==='sub'?(~b)&M:b, cin=op==='sub'?1:0; let carry=cin; r=0; const cins=[cin];
+    for(let i=0;i<8;i++){ const x=bit(a,i), y=bit(bb,i); r|=(x^y^carry)<<i; carry=(x&y)|(carry&(x^y)); cins.push(carry); }
+    c=cins[8]; v=cins[8]^cins[7]; }
+  else if(op==='neg'){ return alu('sub',0,a); }
+  else if(op==='mov'){ r=b&M; c=null; v=null; }
+  return {r:r&M, n:bit(r&M,7), z:(r&M)===0?1:0, c, v};
+}
+const run=(steps)=>{ // produce frames: state after each step
+  const st={R0:0,R1:0,R2:0,R3:0,N:0,Z:0,C:0,V:0}; const frames=[];
+  for(const s of steps){ const before={...st}; let changed=[];
+    if(s.op==='mov'){ st[s.dst]=s.imm&M; changed=[s.dst]; }
+    else if(s.op==='str'){ /* store low byte: narrowing */ st[s.dst]=s.imm&M; changed=[s.dst]; }
+    else { const a=st[s.a], b=s.imm!==undefined?s.imm:st[s.b]; const o=alu(s.op,a,b); st[s.dst]=o.r; changed=[s.dst]; if(s.flags!==false){ st.N=o.n; st.Z=o.z; st.C=o.c; st.V=o.v; changed.push('F'); } }
+    frames.push({step:s, before, after:{...st}, changed}); }
+  return frames;
+};
+const regRow=(name,before,after,changed)=>{ let h=`<div class="hrow"><span class="hl">${name}</span>`; for(let i=7;i>=0;i--){ const v=bit(after,i); const diff=changed&&bit(before,i)!==v; h+=cell(v,((v?'on':'')+(diff?' top':'')).trim()); } return h+`<span class="hv">${hex(after)} = ${after} unsigned, ${signed(after)} signed${changed&&before!==after?` (was ${hex(before)})`:''}</span></div>`; };
+const flagRow=(st,chg)=>`<div class="hflags${chg?' chg':''}"><span><b>N</b> = <b>${st.N}</b></span><span><b>Z</b> = <b>${st.Z}</b></span><span><b>C</b> = <b>${st.C}</b></span><span><b>V</b> = <b>${st.V}</b></span></div>`;
+function mount(id, sc){
+  const host=document.getElementById(id); if(!host) return;
+  const frames=run(sc.steps); let k=-1;
+  const draw=()=>{ const f=k>=0?frames[k]:null; const st=f?f.after:{R0:0,R1:0,R2:0,R3:0,N:0,Z:0,C:0,V:0};
+    let code=''; sc.steps.forEach((s,i)=>{ code+=`<span class="ln${i===k?' run':''}${i<k?' done':''}">${s.asm.padEnd(22)}<span class="cm">; ${s.c||''}</span></span>`; });
+    let regs=''; for(const r of sc.regs) regs+=regRow(r, f?f.before[r]:0, st[r], f&&f.changed.includes(r));
+    host.querySelector('.asm').innerHTML=code;
+    host.querySelector('.regs').innerHTML=regs+flagRow(st, f&&f.changed.includes('F'));
+    host.querySelector('.note').innerHTML=f?f.step.note:sc.start;
+    host.querySelector('.pos').textContent=k<0?'before the first instruction':`after instruction ${k+1} of ${sc.steps.length}`;
+    host.querySelector('.prev').disabled=k<0; host.querySelector('.next').disabled=k>=sc.steps.length-1; };
+  host.querySelector('.next').addEventListener('click',()=>{ if(k<sc.steps.length-1){ k++; draw(); } });
+  host.querySelector('.prev').addEventListener('click',()=>{ if(k>=0){ k--; draw(); } });
+  host.querySelector('.reset').addEventListener('click',()=>{ k=-1; draw(); });
+  draw();
+}
+/* ---- the scenarios ---- */
+mount('s1',{ regs:['R0'], start:'i is 0. The loop body has run for i = 0 and the decrement is about to execute.',
+  steps:[
+    {op:'mov',dst:'R0',imm:0,asm:'MOV   R0, #0',c:'uint8_t i = 0',note:'R0 holds i = 0, the last index the loop should visit.'},
+    {op:'sub',dst:'R0',a:'R0',imm:1,asm:'SUBS  R0, R0, #1',c:'i--',note:'0 − 1 steps back past zero round the wheel: R0 is now 0xFF = 255. C = 0 says a borrow happened, but nothing in the loop reads C.'},
+    {op:'sub',dst:'R3',a:'R0',imm:0,asm:'CMP   R0, #0',c:'i >= 0 ?',note:'The compiler compares as unsigned, since i is unsigned: 255 ≥ 0 is true (C = 1, no borrow), so the loop runs again with i = 255 and reads 255 elements past the array. In fact most compilers notice that an unsigned value is always ≥ 0 and delete the test entirely, which is the same bug faster.'},
+  ]});
+mount('s2',{ regs:['R0'], start:'x is 127, the largest int8_t.',
+  steps:[
+    {op:'mov',dst:'R0',imm:127,asm:'MOV   R0, #127',c:'int8_t x = 127',note:'R0 holds 0x7F. Top bit 0: positive under the signed reading.'},
+    {op:'add',dst:'R0',a:'R0',imm:1,asm:'ADDS  R0, R0, #1',c:'x + 1',note:'0x7F + 1 = 0x80. The top bit has flipped: the register reads as −128. V = 1 because the carry into the top bit (1) differs from the carry out (0): the true answer 128 does not fit. C says nothing, because under the unsigned reading 127 + 1 = 128 fits fine.'},
+  ]});
+mount('s3',{ regs:['R0','R1'], start:'The value 200 sits in a wider register, as an int would.',
+  steps:[
+    {op:'mov',dst:'R0',imm:200,asm:'MOV   R0, #200',c:'int v = 200',note:'As a 32-bit int, 200 is 0x000000C8. Only its low byte is drawn here: 0xC8.'},
+    {op:'str',dst:'R1',imm:200,asm:'STRB  R0, [x]',c:'int8_t x = v',note:'Storing to an int8_t keeps only the low byte. The bits are unchanged, 0xC8, but as an int8_t they are read with the top bit worth −128: x is −56. No flag is involved; nothing was computed, only a reading was changed. C calls this implementation-defined, and every mainstream compiler does exactly this.'},
+  ]});
+mount('s4',{ regs:['R0','R1'], start:'x is −128, the most negative int8_t. The code wants its absolute value.',
+  steps:[
+    {op:'mov',dst:'R0',imm:0x80,asm:'MOV   R0, #0x80',c:'int8_t x = -128',note:'R0 holds 0x80: top bit set, every other bit 0. It is −8 of the subtraction page at 8 bits.'},
+    {op:'neg',dst:'R1',a:'R0',asm:'RSBS  R1, R0, #0',c:'y = -x   (or abs(x))',note:'Negation is 0 − R0, which the ALU does as 0 + NOT R0 + 1: NOT 0x80 = 0x7F, plus 1 = 0x80. The same pattern comes back. V = 1: carry into the top bit 1, carry out 0. y is still −128, and any code that now assumes y ≥ 0 is wrong. C calls this undefined; the hardware calls it V.'},
+  ]});
+mount('s5',{ regs:['R0','R1','R2'], start:'A parser has read the digits of "−128" as a positive number and will negate at the end.',
+  steps:[
+    {op:'mov',dst:'R0',imm:12,asm:'MOV   R0, #12',c:'acc = 12   (after "1","2")',note:'So far so good: 12 fits.'},
+    {op:'mov',dst:'R1',imm:120,asm:'MOV   R1, #120',c:'acc * 10',note:'120 still fits in an int8_t.'},
+    {op:'add',dst:'R2',a:'R1',imm:8,asm:'ADDS  R2, R1, #8',c:'acc = acc*10 + 8',note:'120 + 8 = 128 does not fit: R2 is 0x80, which reads as −128, and V = 1. The positive 128 never existed in the register.'},
+    {op:'neg',dst:'R2',a:'R2',asm:'RSBS  R2, R2, #0',c:'return -acc',note:'Negating 0x80 gives 0x80 again, V = 1 again. The parser returns −128, which happens to be the right answer, by two wrongs cancelling. Try "128" without the minus sign and the same code returns −128 for +128. A parser that accumulates negatively, −1, −12, −128, never leaves the range.'},
+  ]});
+mount('s6',{ regs:['R0','R1','R2'], start:'a is 3 and b is 5, both unsigned. The code wants to know whether a − b wrapped, and C cannot read the carry flag.',
+  steps:[
+    {op:'mov',dst:'R0',imm:3,asm:'MOV   R0, #3',c:'uint8_t a = 3',note:''},
+    {op:'mov',dst:'R1',imm:5,asm:'MOV   R1, #5',c:'uint8_t b = 5',note:''},
+    {op:'sub',dst:'R2',a:'R0',b:'R1',asm:'SUBS  R2, R0, R1',c:'d = a - b',note:'3 − 5 wraps to 0xFE = 254. The hardware says so with C = 0, but C the language has no way to read C the flag.'},
+    {op:'sub',dst:'R3',a:'R0',b:'R2',asm:'CMP   R0, R2',c:'if (d > a)',note:'So the idiom compares instead: is the difference bigger than what we started with? 254 > 3, and that can only happen if the subtraction went round the wheel. The compare does 3 − 254 and sets C = 0 (a borrow), which is what the unsigned "greater than" branch reads. A compiler given __builtin_sub_overflow emits the first SUBS and tests its C directly, skipping the second compare.'},
+  ]});
+mount('s7',{ regs:['R0'], start:'One register, printed twice.',
+  steps:[
+    {op:'mov',dst:'R0',imm:0xFE,asm:'MOV   R0, #0xFE',c:'int8_t x = -2',note:'R0 holds 0xFE.'},
+    {op:'mov',dst:'R0',imm:0xFE,asm:'; printf("%d", x)',c:'prints -2',note:'%d reads the register with the top bit worth −128: −128 + 64 + 32 + 16 + 8 + 4 + 2 = −2. Nothing in the register changed.'},
+    {op:'mov',dst:'R0',imm:0xFE,asm:'; printf("%u", x)',c:'prints 254 (4294967294 at 32 bits)',note:'%u reads the same bits with the top bit worth +128: 254. At 32 bits the same mistake prints 4294967294, the classic "huge number" that means a negative was printed as unsigned. The register never changed; only the reading did.'},
+  ]});
+
+})();
+</script>
+</body>
+</html>

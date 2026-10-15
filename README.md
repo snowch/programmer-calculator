@@ -36,6 +36,7 @@ works from any sub-path):
 | `docs/twos-complement.html`, `docs/twos-complement.pdf` | The two's complement tutorial: print-ready HTML source and the PDF rendered from it |
 | `docs/notes.html` | Contents page for the series *From gates to a compiled if*: reading order, who it is for, what to know first |
 | `docs/bit-lab.html` | Bit Lab: an interactive gate-level lab on bitwise operations, binary arithmetic and the N Z C V flags |
+| `docs/c-meets-the-wheel.html` | Where C meets the wheel: seven C integer traps stepped through in ARM assembly with 8-bit registers and flags drawn before and after |
 | `docs/gates-to-alu.html`, `docs/gates-to-register.html` | The Bit Lab's companion pages: a full adder and a 4-bit ripple adder from gates; a latch, a clock and a register from gates |
 | `docs/adding-to-subtracting.html` | From adding to subtracting: wrap-around on a 16-position wheel, negation as NOT then add 1, and the adder subtracting with the borrow read off the carry, with bits you can tap |
 | `docs/bytes-to-registers.html` | From bytes to registers: why a byte is widened to fill a 32-bit register, what LDRB and LDRSB write into the spare bits, and the widened compare's flags, cell by cell |
