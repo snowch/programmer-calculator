@@ -349,7 +349,7 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
     <button class="small themebtn" id="themeBtn" type="button">theme: auto</button>
   </div>
   <nav class="toc" aria-label="Scenarios">
-    <a href="#s1">1 The loop that never ends</a><a href="#s2">2 127 + 1</a><a href="#s3">3 200 into an int8_t</a><a href="#s4">4 −(−128)</a><a href="#s5">5 Parsing −128</a><a href="#s6">6 Detecting a wrap in C</a><a href="#s7">7 %d and %u</a><a href="#s8">8 INT_MIN / −1</a><a href="#s9">9 The check that vanished</a><a href="#s10">10 255 + 1</a><a href="#how">Reading these</a>
+    <a href="#s1">1 The loop that never ends</a><a href="#s2">2 127 + 1</a><a href="#s3">3 200 into an int8_t</a><a href="#s4">4 −(−128)</a><a href="#s5">5 Parsing −128</a><a href="#s6">6 Detecting a wrap in C</a><a href="#s7">7 %d and %u</a><a href="#s8">8 INT_MIN / −1</a><a href="#s9">9 The check that vanished</a><a href="#s10">10 255 + 1</a><a href="#catch">Catching these</a><a href="#how">Reading these</a>
   </nav>
   <p class="tip">Every scenario is at 8 bits with <code>int8_t</code> and <code>uint8_t</code>, so every bit is on screen. The same things happen at 32 bits with <code>int</code> and <code>unsigned</code>; the 32-bit numbers are named where they differ. The assembly is ARM. Step through each one and watch the registers and flags; changed bits are outlined.</p>
   <section class="tut first scen" id="s1">
@@ -480,6 +480,44 @@ if (s < a) /* carried */</pre>
       <div class="hood regs"></div>
       <p class="note"></p>
     </div>
+  </section>
+
+  <section class="tut" id="catch">
+    <h2>Catching these</h2>
+    <p>At the machine level the answer is already in the flags row: V = 1 or C = 1 is the hardware saying so, and in assembly the next instruction would be <code>BVS overflow</code> or <code>BCS carried</code>. C has no spelling for that branch, so protection comes from the choices below, cheapest first. The table at the end says which one catches each scenario.</p>
+    <h3>Choose types with headroom</h3>
+    <p>Compute in a type wide enough that the edge is far away, and narrow only at the end if you must. Sizes and counts belong in <code>size_t</code>, not <code>int</code>. An <code>int8_t</code> should hold a value, not be the type you compute in; C promotes it to <code>int</code> for arithmetic anyway, so <code>x + 1</code> on an <code>int8_t</code> is computed at 32 bits and only overflows at the store, which is scenario 3 rather than scenario 2.</p>
+    <h3>Check before, not after</h3>
+    <p>Checking after the operation is scenario 9: the compiler may assume the overflow never happened and delete the check. Write the test in terms that cannot overflow themselves:</p>
+    <pre class="work">if (b &gt; 0 &amp;&amp; a &gt; INT_MAX - b)  /* a + b would overflow   */
+if (b &lt; 0 &amp;&amp; a &lt; INT_MIN - b)  /* a + b would underflow  */
+if (x == INT_MIN)               /* -x and abs(x) are unsafe */
+if (d == -1 &amp;&amp; x == INT_MIN)     /* x / d is unsafe        */</pre>
+    <h3>Ask the compiler to read the flag for you</h3>
+    <p>GCC and Clang provide <code>__builtin_add_overflow(a, b, &amp;r)</code>, <code>__builtin_sub_overflow</code> and <code>__builtin_mul_overflow</code>, which store the wrapped result in <code>r</code> and return true when it did not fit. They compile to the add plus a test of V or C, whichever the operand types call for. C23 standardises them as <code>ckd_add</code>, <code>ckd_sub</code> and <code>ckd_mul</code> in <code>&lt;stdckdint.h&gt;</code>. This is the tool for the cases where overflow is a real possibility rather than a bug, such as sizes computed from input.</p>
+    <h3>Let the compiler warn</h3>
+    <p><code>-Wall -Wextra</code> plus <code>-Wconversion -Wsign-conversion -Wsign-compare -Wtype-limits</code> catch most of this page at compile time. <code>-Wtype-limits</code> flags the <code>i &gt;= 0</code> on an unsigned in scenario 1 as always true; <code>-Wconversion</code> flags the narrowing store in scenario 3; <code>-Wsign-compare</code> flags a signed value compared with an unsigned one, the usual way scenario 7's two readings collide inside a program; <code>-Wformat</code> flags the <code>%u</code> given a signed argument.</p>
+    <h3>Make the hardware's verdict fatal in test builds</h3>
+    <p><code>-fsanitize=signed-integer-overflow</code>, or all of <code>-fsanitize=undefined</code>, inserts the <code>BVS</code> that C lacks and aborts with a message naming the source line. Run the tests and any fuzzer with it on. <code>-fsanitize=unsigned-integer-overflow</code> does the same for unsigned wrap, which is not an error in C but is usually a bug in the program. <code>-ftrapv</code> is the older, blunter form.</p>
+    <h3>Decide what wrap means</h3>
+    <p>If you want modular arithmetic, do it in <code>unsigned</code>, where the wrap is defined and no flag is needed, and say so in a comment. If you want signed wrap to be a promise rather than undefined behaviour, <code>-fwrapv</code> makes it one, and scenario 9's check comes back; it costs some optimisations and is specific to GCC and Clang.</p>
+    <h3>Test the edges on purpose</h3>
+    <p><code>INT_MAX</code>, <code>INT_MIN</code>, 0, −1, <code>UINT_MAX</code>, and one short of and one past every size limit in the program. Part 3's "does it fit" drill is this habit in miniature.</p>
+    <h3>Which catches which</h3>
+    <table class="truth" style="font-family:var(--sans);text-align:left">
+      <tr><th>Scenario</th><th>Compile time</th><th>Test time</th><th>In the code</th></tr>
+      <tr><td>1 unsigned countdown</td><td><code>-Wtype-limits</code></td><td>address sanitizer, when the stray index is used</td><td>loop <code>for (i = n; i-- &gt; 0;)</code>, or a signed index</td></tr>
+      <tr><td>2 127 + 1</td><td>no</td><td><code>-fsanitize=signed-integer-overflow</code></td><td>wider type, or <code>ckd_add</code></td></tr>
+      <tr><td>3 200 into int8_t</td><td><code>-Wconversion</code></td><td><code>-fsanitize=implicit-conversion</code> (Clang)</td><td>range check before narrowing</td></tr>
+      <tr><td>4 −(−128)</td><td>no</td><td><code>-fsanitize=signed-integer-overflow</code></td><td>test for <code>INT_MIN</code> first; compute <code>abs</code> in a wider type</td></tr>
+      <tr><td>5 parsing −128</td><td>no</td><td>sanitizer, with the edge value in the tests</td><td>accumulate negatively, or use <code>strtol</code> and check <code>errno</code></td></tr>
+      <tr><td>6 detecting a wrap</td><td>not a bug: the idiom is the protection</td><td></td><td><code>ckd_sub</code> says it directly</td></tr>
+      <tr><td>7 %d and %u</td><td><code>-Wformat</code></td><td></td><td>match the format to the type</td></tr>
+      <tr><td>8 INT_MIN / −1</td><td>no</td><td>sanitizer; a crash on x86 in any case</td><td>test both operands before dividing</td></tr>
+      <tr><td>9 the vanished check</td><td>sometimes: <code>-Wstrict-overflow</code></td><td>the sanitizer fires at the add the check was meant to guard</td><td>check before, or <code>ckd_add</code>, or <code>-fwrapv</code></td></tr>
+      <tr><td>10 255 + 1</td><td>no</td><td><code>-fsanitize=unsigned-integer-overflow</code> (Clang)</td><td>the <code>s &lt; a</code> idiom, or <code>ckd_add</code></td></tr>
+    </table>
+    <p>Other languages, for comparison: Rust panics on overflow in debug builds and spells the intent in the code with <code>checked_add</code>, <code>wrapping_add</code> and <code>saturating_add</code>; Swift traps always; Java wraps silently, like C with <code>-fwrapv</code>; Python has no fixed width, so none of this exists there, which is why people arriving from Python meet it as a surprise.</p>
   </section>
 
   <section class="tut" id="how">
