@@ -575,7 +575,7 @@ mount('s1',{ regs:['R0'], start:'The loop has already run for i = 7 down to i = 
 mount('s2',{ regs:['R0'], start:'x is 127, the largest int8_t.',
   steps:[
     {op:'mov',dst:'R0',imm:127,asm:'MOV   R0, #127',c:'int8_t x = 127',note:'R0 holds 0x7F. Top bit 0: positive under the signed reading.'},
-    {op:'add',dst:'R0',a:'R0',imm:1,asm:'ADDS  R0, R0, #1',c:'x + 1',note:'0x7F + 1 = 0x80. The top bit has flipped: the register reads as −128. V = 1 because the carry into the top bit (1) differs from the carry out (0): the true answer 128 does not fit. C says nothing, because under the unsigned reading 127 + 1 = 128 fits fine.'},
+    {op:'add',dst:'R0',a:'R0',imm:1,asm:'ADDS  R0, R0, #1',c:'x + 1',note:'Follow the 1 up the columns. 0x7F is 0111 1111. Adding 1 to bit 0 makes it 0 and carries a 1 into bit 1; that makes bit 1 a 0 and carries into bit 2; and so on, every one of the seven low bits turning 0 and passing the carry on. So a carry arrives at the top bit. The top bit was 0, so it becomes 1 and produces no carry of its own: nothing leaves the top of the register. Result: 1000 0000, 0x80.<br><br>Now the flags. <strong>C</strong> is the carry that left the top: none did, so C = 0. Under the unsigned reading that is the right verdict: 127 + 1 = 128, and 128 fits in 8 bits, so nothing was lost. <strong>V</strong> compares the carry that went into the top bit (1) with the carry that left it (0). They differ, so V = 1. Under the signed reading that is the right verdict too: the only thing that changed in the top bit is that it went from 0 to 1, and under the signed reading that bit is worth −128, so the answer went from +127 to −128 instead of to +128. Same bits, two flags, each judging its own reading: C says the unsigned answer is fine, V says the signed answer is not.'},
   ]});
 mount('s3',{ regs:['R0','R1'], start:'The value 200 sits in a wider register, as an int would.',
   steps:[
@@ -585,7 +585,7 @@ mount('s3',{ regs:['R0','R1'], start:'The value 200 sits in a wider register, as
 mount('s4',{ regs:['R0','R1'], start:'x is −128, the most negative int8_t. The code wants its absolute value.',
   steps:[
     {op:'mov',dst:'R0',imm:0x80,asm:'MOV   R0, #0x80',c:'int8_t x = -128',note:'R0 holds 0x80: top bit set, every other bit 0. It is −8 of the subtraction page at 8 bits.'},
-    {op:'neg',dst:'R1',a:'R0',asm:'RSBS  R1, R0, #0',c:'y = -x   (or abs(x))',note:'Negation is 0 − R0, which the ALU does as 0 + NOT R0 + 1: NOT 0x80 = 0x7F, plus 1 = 0x80. The same pattern comes back. V = 1: carry into the top bit 1, carry out 0. y is still −128, and any code that now assumes y ≥ 0 is wrong. C calls this undefined; the hardware calls it V.'},
+    {op:'neg',dst:'R1',a:'R0',asm:'RSBS  R1, R0, #0',c:'y = -x   (or abs(x))',note:'Negation is 0 − R0, which the ALU does as 0 + NOT R0 + 1. NOT 0x80 is 0x7F, 0111 1111. Adding the 1 carries up through all seven low bits, exactly as in scenario 2, and arrives at the top bit; the top bit was 0, becomes 1, and nothing leaves the register. So the same pattern, 0x80, comes back, and V = 1 for the same reason as in scenario 2: a carry went into the top bit and none came out, so the top bit changed sign without the answer being representable. y is still −128, and any code that now assumes y ≥ 0 is wrong. C calls this undefined; the hardware calls it V.'},
   ]});
 mount('s5',{ regs:['R0','R1','R2'], start:'A parser has read the digits of "−128" as a positive number and will negate at the end.',
   steps:[
