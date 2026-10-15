@@ -432,7 +432,7 @@ const ASM_PRESETS=[
   document.querySelectorAll('.asmPresets').forEach(host=>{
   const cap=document.createElement('span'); cap.textContent='Load a pair'; host.appendChild(cap);
   for(const [t,a,b] of ASM_PRESETS){
-    const btn=document.createElement('button'); btn.className='small'; btn.type='button'; btn.textContent=t;
+    const btn=document.createElement('button'); btn.className='small'; btn.type='button'; btn.textContent=t; btn.dataset.pair=a+','+b; btn.setAttribute('aria-pressed','false');
     btn.addEventListener('click',()=>{ state.op='SUB'; state.w=8; state.a=a; state.b=b; update(); });
     host.appendChild(btn);
   }
@@ -557,6 +557,7 @@ window.addEventListener('resize',()=>{ clearTimeout(window.__bitlabResize); wind
 function update(){
   const w=state.w, M=mask(w); state.a&=M; state.b&=M;
   document.querySelectorAll('button[data-w]').forEach(x=>x.setAttribute('aria-pressed',Number(x.dataset.w)===w?'true':'false'));
+  document.querySelectorAll('button[data-pair]').forEach(x=>{ const [pa,pb]=x.dataset.pair.split(',').map(Number); x.setAttribute('aria-pressed',(w===8&&pa===state.a&&pb===state.b)?'true':'false'); });
   const pair=document.getElementById('pair'); if(pair) pair.innerHTML=byteRow('A','a',state.a,w)+byteRow('B','b',state.b,w);
   renderAsm(null);
 }

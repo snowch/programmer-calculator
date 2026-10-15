@@ -489,6 +489,7 @@ function renderHood(S,a,b,w,a32,b32){
 function update(){
   const a=state.a&0xFF, b=state.b&0xFF, S=state.S, w=8;
   document.querySelectorAll('button.asmType').forEach(x=>x.setAttribute('aria-pressed',(x.dataset.s==='1')===S?'true':'false'));
+  document.querySelectorAll('button[data-pair]').forEach(x=>{ const [pa,pb]=x.dataset.pair.split(',').map(Number); x.setAttribute('aria-pressed',(pa===a&&pb===b)?'true':'false'); });
   const pair=document.getElementById('pair'); if(pair) pair.innerHTML=byteRow('A','a',a)+byteRow('B','b',b);
   const ext=x=>S?((bit(x,7)?(x|0xFFFFFF00):x)>>>0):x, a32=ext(a), b32=ext(b);
   renderHood(S,a,b,w,a32,b32);

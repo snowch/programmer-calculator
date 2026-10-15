@@ -536,6 +536,8 @@ function wheel(a,b,w){
 function render(){
   const {w}=state, M=mask(w); state.a&=M; state.b&=M; const a=state.a, b=state.b, f=sub(a,b,w), n=1<<w;
   document.querySelectorAll('button[data-w]').forEach(x=>x.setAttribute('aria-pressed',Number(x.dataset.w)===w?'true':'false'));
+  document.querySelectorAll('button[data-preset]').forEach(x=>{ const [pw,pa,pb]=x.dataset.preset.split(',').map(Number); x.setAttribute('aria-pressed',(pw===w&&pa===a&&pb===b)?'true':'false'); });
+  document.querySelectorAll('button[data-b]').forEach(x=>{ const bw=x.dataset.bw?Number(x.dataset.bw):w; x.setAttribute('aria-pressed',(bw===w&&(Number(x.dataset.b)&M)===b)?'true':'false'); });
   wheel(a,b,w);
   const wrapTxt=document.getElementById('wrapTxt'); if(wrapTxt){ const t=a-b; wrapTxt.innerHTML = t<0
     ? `${a} − ${b} would be ${t}, which is below zero. ${w} bits cannot hold it, so counting back past 0 wraps round to ${n-1} and lands on the pattern <strong>${f.res.toString(2).padStart(w,'0')}</strong>, ${hex(f.res,w)}. Read as unsigned that pattern is <strong>${f.res}</strong>, which is ${t} + ${n}. Read as signed it is <strong>${signed(f.res,w)}</strong>, the answer you expected. Same bits, both readings.`
