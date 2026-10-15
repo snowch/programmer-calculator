@@ -349,7 +349,7 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
     <button class="small themebtn" id="themeBtn" type="button">theme: auto</button>
   </div>
   <nav class="toc" aria-label="Scenarios">
-    <a href="#s1">1 The loop that never ends</a><a href="#s2">2 127 + 1</a><a href="#s3">3 200 into an int8_t</a><a href="#s4">4 −(−128)</a><a href="#s5">5 Parsing −128</a><a href="#s6">6 Detecting a wrap in C</a><a href="#s7">7 %d and %u</a><a href="#how">Reading these</a>
+    <a href="#s1">1 The loop that never ends</a><a href="#s2">2 127 + 1</a><a href="#s3">3 200 into an int8_t</a><a href="#s4">4 −(−128)</a><a href="#s5">5 Parsing −128</a><a href="#s6">6 Detecting a wrap in C</a><a href="#s7">7 %d and %u</a><a href="#s8">8 INT_MIN / −1</a><a href="#s9">9 The check that vanished</a><a href="#s10">10 255 + 1</a><a href="#how">Reading these</a>
   </nav>
   <p class="tip">Every scenario is at 8 bits with <code>int8_t</code> and <code>uint8_t</code>, so every bit is on screen. The same things happen at 32 bits with <code>int</code> and <code>unsigned</code>; the 32-bit numbers are named where they differ. The assembly is ARM. Step through each one and watch the registers and flags; changed bits are outlined.</p>
   <section class="tut first scen" id="s1">
@@ -441,6 +441,44 @@ printf("%u", x);   // 254</pre>
       <p class="note"></p>
     </div>
   </section>
+  <section class="tut scen" id="s8">
+    <h2>8. INT_MIN / −1</h2>
+    <pre class="work csrc">int8_t x = -128, d = -1;
+int8_t q = x / d;   // +128 does not fit</pre>
+    <p>The one division that overflows. ARM and x86 do different things, and C permits both because it calls the case undefined.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+  <section class="tut scen" id="s9">
+    <h2>9. The check that vanished</h2>
+    <pre class="work csrc">int8_t x = 127;
+if (x + 1 > x)
+    puts("no overflow");</pre>
+    <p>An overflow check written in C, compiled with optimisation. The listing shows what the compiler emitted; what is missing is the point.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
+  <section class="tut scen" id="s10">
+    <h2>10. 255 + 1, and detecting it</h2>
+    <pre class="work csrc">uint8_t a = 255, b = 1;
+uint8_t s = a + b;
+if (s < a) /* carried */</pre>
+    <p>The addition twin of scenario 6: the carry out of the top bit, and the comparison that reveals it from C.</p>
+    <div class="trace">
+      <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
+      <pre class="work asmprog asm"></pre>
+      <div class="hood regs"></div>
+      <p class="note"></p>
+    </div>
+  </section>
 
   <section class="tut" id="how">
     <h2>Reading these</h2>
@@ -448,6 +486,7 @@ printf("%u", x);   // 254</pre>
       <li>Each trace runs on a machine with four 8-bit registers and the N Z C V flags, computed the way the <a href="bit-lab.html">Bit Lab</a> does it: subtraction is A + NOT B + 1, C is the carry out of the top bit, V is the carry into the top bit XOR the carry out.</li>
       <li>Outlined cells changed in the last step. The flags row is highlighted when the last instruction set the flags; ARM instructions only do so when asked, which is the trailing <code>S</code> on <code>SUBS</code> and <code>ADDS</code>.</li>
       <li>Where C says "undefined behaviour", the hardware still does something definite, and these traces show it. The catch is that the compiler is allowed to assume the undefined case never happens and may have rearranged the code before it reached the machine, so what you observe can differ from the trace and from run to run. Compile with <code>-fsanitize=undefined</code> to be told when a trace like these is happening in your program.</li>
+      <li><code>-fwrapv</code> tells GCC and Clang to treat signed overflow as a defined wrap, the way the hardware does it. Scenario 9 then compiles to the add and compare the programmer expected. It costs some optimisations and is not portable to other compilers, but it turns the undefined cases on this page into the traces shown.</li>
       <li>To see the real instructions for your own C, paste it into <a href="https://godbolt.org/">Compiler Explorer</a> with an ARM GCC at <code>-O1</code>.</li>
     </ul>
   </section>
@@ -500,6 +539,8 @@ const run=(steps)=>{ // produce frames: state after each step
   for(const s of steps){ const before={...st}; let changed=[];
     if(s.op==='mov'){ st[s.dst]=s.imm&M; changed=[s.dst]; }
     else if(s.op==='str'){ /* store low byte: narrowing */ st[s.dst]=s.imm&M; changed=[s.dst]; }
+    else if(s.op==='sdiv'){ const a=signed(st[s.a]), b=signed(st[s.b]); const q=b===0?0:Math.trunc(a/b); st[s.dst]=q&M; changed=[s.dst]; }
+    else if(s.op==='nop'){ changed=[]; }
     else { const a=st[s.a], b=s.imm!==undefined?s.imm:st[s.b]; const o=alu(s.op,a,b); st[s.dst]=o.r; changed=[s.dst]; if(s.flags!==false){ st.N=o.n; st.Z=o.z; st.C=o.c; st.V=o.v; changed.push('F'); } }
     frames.push({step:s, before, after:{...st}, changed}); }
   return frames;
@@ -563,6 +604,25 @@ mount('s7',{ regs:['R0'], start:'One register, printed twice.',
     {op:'mov',dst:'R0',imm:0xFE,asm:'MOV   R0, #0xFE',c:'int8_t x = -2',note:'R0 holds 0xFE.'},
     {op:'mov',dst:'R0',imm:0xFE,asm:'; printf("%d", x)',c:'prints -2',note:'%d reads the register with the top bit worth −128: −128 + 64 + 32 + 16 + 8 + 4 + 2 = −2. Nothing in the register changed.'},
     {op:'mov',dst:'R0',imm:0xFE,asm:'; printf("%u", x)',c:'prints 254 (4294967294 at 32 bits)',note:'%u reads the same bits with the top bit worth +128: 254. At 32 bits the same mistake prints 4294967294, the classic "huge number" that means a negative was printed as unsigned. The register never changed; only the reading did.'},
+  ]});
+
+mount('s8',{ regs:['R0','R1','R2'], start:'x is −128 and the divisor is −1. The true quotient is +128.',
+  steps:[
+    {op:'mov',dst:'R0',imm:0x80,asm:'MOV   R0, #0x80',c:'int8_t x = -128',note:'R0 holds 0x80, −128.'},
+    {op:'mov',dst:'R1',imm:0xFF,asm:'MOV   R1, #0xFF',c:'int8_t d = -1',note:'R1 holds 0xFF, −1.'},
+    {op:'sdiv',dst:'R2',a:'R0',b:'R1',asm:'SDIV  R2, R0, R1',c:'x / d',note:'−128 ÷ −1 = +128, which does not fit. ARM\'s SDIV does not trap and sets no flags: it writes the low 8 bits of the answer, 0x80, so the quotient reads as −128 and the program carries on with the wrong sign. On x86 the equivalent IDIV instruction raises a divide-error exception instead, the same one as dividing by zero, and the process dies with a floating-point exception from integer code. Neither machine gives +128; C calls the case undefined so both are allowed.'},
+  ]});
+mount('s9',{ regs:['R0','R1'], start:'The programmer checks for overflow by asking whether adding one made the number bigger. The listing on the left is what they expect; step through to see what the compiler emitted at -O2.',
+  steps:[
+    {op:'mov',dst:'R0',imm:127,asm:'MOV   R0, #127',c:'int8_t x = 127',note:'R0 holds 127.'},
+    {op:'mov',dst:'R1',imm:1,asm:'MOV   R1, #1',c:'if (x + 1 > x)  → true',note:'There is no ADDS and no CMP. The compiler reasoned: for a signed x, x + 1 > x is false only when x + 1 overflows; overflow is undefined behaviour; a program with undefined behaviour may do anything; so I may assume it is true. It stored the constant 1. The wrap that scenario 2 showed never gets a chance to happen, and the check the programmer wrote is gone. Compile with -fwrapv and the add and compare come back, and the test is false for 127.'},
+  ]});
+mount('s10',{ regs:['R0','R1','R2'], start:'a is 255 and b is 1, both unsigned. The code wants to know whether a + b carried out of the top bit.',
+  steps:[
+    {op:'mov',dst:'R0',imm:255,asm:'MOV   R0, #255',c:'uint8_t a = 255',note:''},
+    {op:'mov',dst:'R1',imm:1,asm:'MOV   R1, #1',c:'uint8_t b = 1',note:''},
+    {op:'add',dst:'R2',a:'R0',b:'R1',asm:'ADDS  R2, R0, R1',c:'s = a + b',note:'255 + 1 = 256 falls off the top: R2 is 0x00. C = 1 is the 256 that fell off, and Z = 1 because what remained is zero. V = 0: as signed this was −1 + 1 = 0, which is right.'},
+    {op:'sub',dst:'R3',a:'R2',b:'R0',asm:'CMP   R2, R0',c:'if (s < a)',note:'The twin of scenario 6: a sum smaller than one of its inputs can only come from going round the wheel. 0 < 255 is true, so the code knows the addition carried. The compare does 0 − 255, a borrow, C = 0, which is what the unsigned less-than branch reads.'},
   ]});
 
 })();
