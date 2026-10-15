@@ -318,7 +318,7 @@ ol.trace li{margin:0 0 4px}
 <main>
   <div class="top">
     <div>
-      <p class="crumbs"><a href="notes.html" title="From gates to a compiled if: contents">Home</a> · part 4 of 7</p>
+      <p class="crumbs"><a href="notes.html" title="From gates to a compiled if: contents">Home</a> · part 5 of 9</p>
       <h1>Bit Lab: the ALU and its flags</h1>
       <p class="lede">A hands-on lab on bitwise operations, binary arithmetic and the N Z C V condition flags, built from gates you can see.</p>
     </div>
@@ -338,7 +338,7 @@ ol.trace li{margin:0 0 4px}
       <li>The truth tables of NOT, AND, OR and XOR.</li>
       <li>The idea that a CPU register holds a fixed number of bits (here 4 or 8).</li>
     </ul>
-    <p>This is part 4 of <a href="notes.html"><em>From gates to a compiled if</em></a>. Parts 1 and 2, and a side trip, build the parts this lab uses from those gates, with inputs you can tap: <a href="gates-to-alu.html"><em>From gates to an ALU</em></a> (a full adder, then four of them chained), <a href="adding-to-subtracting.html"><em>From adding to subtracting</em></a> (wrap-around, NOT then add 1, and the borrow as a carry) and <a href="gates-to-register.html"><em>From gates to a register</em></a> (a latch, a clock, a 4-bit register). Read them first if you want the ground under your feet; the background below only summarises them.</p>
+    <p>This is part 5 of <a href="notes.html"><em>From gates to a compiled if</em></a>. Three other parts build the pieces this lab uses from those gates, with inputs you can tap: <a href="gates-to-alu.html"><em>From gates to an ALU</em></a> (a full adder, then four of them chained), <a href="adding-to-subtracting.html"><em>From adding to subtracting</em></a> (wrap-around, NOT then add 1, and the borrow as a carry) and <a href="gates-to-register.html"><em>From gates to a register</em></a> (a latch, a clock, a 4-bit register). Read them first if you want the ground under your feet; the background below only summarises them.</p>
     <p><strong>Notation.</strong> Gate equations on this page use the usual Boolean shorthand: <code>A ⊕ B</code> is XOR (1 exactly when the inputs differ), <code>A·B</code> or <code>AB</code> is AND, <code>A + B</code> is OR when it appears inside a gate equation, and <code>¬A</code> is NOT. So the full adder's carry-out, <code>A·B + cin·(A ⊕ B)</code>, reads "A and B, or cin and (A xor B)". Everywhere else on the page, + is ordinary addition.</p>
     <div class="check">
       <p>Self-check — if you can answer these without the lab, you're ready:</p>
@@ -681,7 +681,7 @@ ol.trace li{margin:0 0 4px}
     </ul>
   </section>
 
-  <nav class="pager" aria-label="Series navigation"><a class="prev" href="readings-drills.html">Previous: Two readings: drills</a><a class="up" href="notes.html">Contents</a><a class="next" href="who-decides.html">Next: Signed or unsigned: who decides?</a></nav>
+  <nav class="pager" aria-label="Series navigation"><a class="prev" href="c-meets-the-wheel.html">Previous: Where C meets the wheel</a><a class="up" href="notes.html">Contents</a><a class="next" href="gates-to-register.html">Next: From gates to a register</a></nav>
   <footer class="site">
     <a href="notes.html">From gates to a compiled if: contents</a>
     <a href="../">Programmer Calculator app</a>
