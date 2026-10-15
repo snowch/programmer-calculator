@@ -345,6 +345,10 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
 .hb.tap{cursor:pointer}
 .hb.tap:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .hood#brow{margin-bottom:-6px}
+details.inc{margin:10px 0 14px;border:1px solid var(--rule);border-radius:8px;padding:6px 12px;background:var(--paper-2)}
+details.inc summary{cursor:pointer;font:600 .9rem var(--sans);color:var(--ink)}
+details.inc ul{margin:6px 0 4px;padding-left:20px;font-size:.92rem}
+details.inc li{margin:0 0 6px}
 .fixedwrap{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;margin:6px 0 14px}
 @media (max-width:700px){.fixedwrap{grid-template-columns:1fr}}
 .case h4{margin:4px 0 2px;font:600 .95rem var(--sans)}
@@ -396,6 +400,13 @@ svg.nl .sh.u{fill:var(--carry)}
     <p>Subtracting B means stepping back B places around that wheel. If the steps never pass zero, the answer is the ordinary one. If they do, the register lands on a pattern near the top of the range, and that pattern is the result. Nothing has gone wrong: the hardware did the only thing it can do.</p>
     <div class="wheelwrap"><div><div id="wheel"></div><p class="tip" style="text-align:center">Outermost: the four bits of each pattern. Then its unsigned reading, then its signed reading. Amber dot: A. Red dot: A − B.</p></div><p id="wrapTxt"></p></div>
     <p>The wheel also explains why the same pattern has two readings. Going round the outside, the numbers run 0 up to 15. Going round the inside, the top half has been relabelled as negatives, so 15 is −1, 14 is −2, and so on. Stepping back from 3 by 5 lands on the pattern that is 14 to one reading and −2 to the other. The circuit does not know which label you are using, and does not need to.</p>
+    <details class="inc"><summary>In C</summary>
+      <ul>
+        <li>For <code>unsigned</code> types the wheel is the law: the standard defines arithmetic as modulo 2<sup>n</sup>, so <code>0u − 1</code> is <code>UINT_MAX</code> by definition. That is why a loop written <code>for (unsigned i = n − 1; i &gt;= 0; i−−)</code> never ends: <code>i</code> steps back past 0 to 4294967295 and the test stays true.</li>
+        <li>For <code>signed</code> types the standard refuses to say. Signed overflow is undefined behaviour, and compilers use that: given <code>x + 1 &gt; x</code> with <code>int x</code>, GCC and Clang may fold it to <code>true</code> because the only case where it is false is one they are allowed to ignore. The hardware still wraps; the compiler just does not promise to let you see it.</li>
+        <li>Converting an out-of-range value to a narrower signed type, as in <code>int8_t x = 200;</code>, is implementation-defined, and every mainstream compiler does what the wheel does: <code>x</code> becomes −56.</li>
+      </ul>
+    </details>
   </section>
 
   <section class="tut" id="negate">
@@ -405,6 +416,15 @@ svg.nl .sh.u{fill:var(--carry)}
     <p>Inverting every bit of B gives 15 − B at 4 bits (255 − B at 8), because each column that held a 1 now holds a 0 and vice versa, and all-ones is 15. Adding 1 more makes it 16 − B, exactly the number to add. That is the whole trick: <strong>−B = NOT B + 1</strong>.</p>
     <div class="hood" id="neg"></div>
     <p class="tip">Negation is a signed idea: NOT B + 1 is −B under the signed reading. Under the unsigned reading the same pattern is simply 16 − B (or 256 − B), the number you add to subtract B. Tap a bit of B to try any value. This section uses only B; A comes back in section 3.</p>
+    <details class="inc"><summary>In C: where −8 bites</summary>
+      <ul>
+        <li>At full width this pattern is <code>INT_MIN</code>, −2<sup>31</sup> for a 32-bit <code>int</code>. <code>-x</code> when <code>x == INT_MIN</code> is undefined behaviour, and on real hardware the same pattern comes back, so the "made positive" value is still negative.</li>
+        <li><code>abs(INT_MIN)</code> is undefined for the same reason and in practice returns <code>INT_MIN</code>. Code that uses <code>abs(a − b)</code> as a distance can get a negative distance, which then indexes an array or passes a bounds check.</li>
+        <li><code>INT_MIN / −1</code> has to produce +2<sup>31</sup>, which does not fit; on x86 the divide instruction raises an exception and the process dies. Dividing by a value read from input is where this surfaces.</li>
+        <li>A parser that reads digits as a positive number and then negates cannot parse "−2147483648", because +2147483648 never fitted. Correct parsers accumulate negatively.</li>
+        <li>The flag the hardware raises, V, is invisible from C. To see the case, use <code>__builtin_sub_overflow</code> and friends, or compile with <code>-fsanitize=signed-integer-overflow</code>.</li>
+      </ul>
+    </details>
   </section>
 
   <section class="tut" id="subtract">
@@ -417,6 +437,13 @@ svg.nl .sh.u{fill:var(--carry)}
     <div class="hood" id="adder"></div>
     <p id="addTxt"></p>
     <p>That last point is where the carry flag comes from. If a carry comes out of the top bit, the adder reached 16 (or 256) and dropped it, which cancels the 16 we added with NOT B + 1, so the result is the plain difference and no borrow happened. If no carry comes out, the 16 is still in there: the result wrapped, because B was bigger than A. ARM and most other designs store this carry out as C, so after a subtraction <strong>C = 1 means no borrow, C = 0 means a borrow</strong>. x86 stores the opposite and calls it the borrow flag, but the circuit is the same.</p>
+    <details class="inc"><summary>In C</summary>
+      <ul>
+        <li>C has no way to read the carry flag. The idiom for "did this unsigned subtraction borrow" is to compare afterwards: <code>if (a − b &gt; a)</code> is true exactly when the subtraction wrapped, because an answer larger than what you started from can only come from going round the wheel.</li>
+        <li>The same trick for addition is <code>if (a + b &lt; a)</code>. Both are only valid for unsigned operands, where the wrap is defined; for signed operands the comparison itself may be optimised away.</li>
+        <li>Modern compilers expose the flags indirectly: <code>__builtin_add_overflow(a, b, &amp;r)</code> returns whether the result fitted, and compiles to the add plus a test of C or V depending on the types.</li>
+      </ul>
+    </details>
   </section>
 
   <section class="tut" id="paper">
@@ -428,6 +455,13 @@ svg.nl .sh.u{fill:var(--carry)}
     <span>Load</span><button class="small" type="button" data-preset="4,5,3">5 − 3</button><button class="small" type="button" data-preset="4,3,5">3 − 5</button><button class="small" type="button" data-preset="4,0,1">0 − 1</button><button class="small" type="button" data-preset="4,7,7">7 − 7</button><button class="small" type="button" data-preset="4,8,1">8 − 1</button><button class="small" type="button" data-preset="4,5,10">5 − (−6)</button><button class="small" type="button" data-preset="4,7,15">7 − (−1)</button><button class="small" type="button" data-preset="8,3,5">3 − 5 at 8 bits</button><button class="small" type="button" data-preset="8,128,1">0x80 − 1</button></div>
     <div class="steps" id="method"></div>
     <p class="tip">On the number line, the grey band above the axis is the signed range and the amber band below it the unsigned range; the ticks mark their ends. The black dot is the true decimal answer; an arrow shows the shift of one wheel size when the answer has to be fitted. Both landings are the same bits.</p>
+    <details class="inc"><summary>In C</summary>
+      <ul>
+        <li>Step 2 is exactly what C promises for unsigned arithmetic: the result is reduced modulo 2<sup>n</sup>, every time, portably.</li>
+        <li>For signed arithmetic C promises nothing when step 2 would have to act. The hardware does the reduction anyway, so you will usually observe it, but the compiler may have assumed it cannot happen and rearranged your code first. <code>-fwrapv</code> tells GCC and Clang to make the wrap a promise.</li>
+        <li>Step 3, reading the pattern with the top bit worth minus its place value, is what every C compiler and debugger does when it prints a signed value. Printing the same variable with <code>%u</code> instead of <code>%d</code> is choosing the other reading of the same bits.</li>
+      </ul>
+    </details>
   </section>
 
   <section class="tut" id="next">
