@@ -354,10 +354,12 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
   <p class="tip">Every scenario is at 8 bits with <code>int8_t</code> and <code>uint8_t</code>, so every bit is on screen. The same things happen at 32 bits with <code>int</code> and <code>unsigned</code>; the 32-bit numbers are named where they differ. The assembly is ARM. Step through each one and watch the registers and flags; changed bits are outlined.</p>
   <section class="tut first scen" id="s1">
     <h2>1. The loop that never ends</h2>
-    <pre class="work csrc">uint8_t i;
-for (i = n - 1; i >= 0; i--)
+    <pre class="work csrc">uint8_t a[8];        // an array of n = 8 elements
+uint8_t n = 8;
+uint8_t i;
+for (i = n - 1; i >= 0; i--)   // clear a[7] down to a[0]
     a[i] = 0;</pre>
-    <p>Counting down with an unsigned index. The programmer means "stop after 0", but 0 − 1 under the unsigned reading is 255, and 255 ≥ 0.</p>
+    <p>Counting down over an array with an unsigned index, from the last element a[n − 1] to the first a[0]. The programmer means "stop after 0", but 0 − 1 under the unsigned reading is 255, and 255 ≥ 0. (Lowercase n is the array length; it has nothing to do with the N flag.)</p>
     <div class="trace">
       <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
       <pre class="work asmprog asm"></pre>
@@ -564,7 +566,7 @@ function mount(id, sc){
   draw();
 }
 /* ---- the scenarios ---- */
-mount('s1',{ regs:['R0'], start:'i is 0. The loop body has run for i = 0 and the decrement is about to execute.',
+mount('s1',{ regs:['R0'], start:'The loop has already run for i = 7 down to i = 0 and cleared every element. R0 holds i = 0 and the decrement is about to execute.',
   steps:[
     {op:'mov',dst:'R0',imm:0,asm:'MOV   R0, #0',c:'uint8_t i = 0',note:'R0 holds i = 0, the last index the loop should visit.'},
     {op:'sub',dst:'R0',a:'R0',imm:1,asm:'SUBS  R0, R0, #1',c:'i--',note:'0 − 1 steps back past zero round the wheel: R0 is now 0xFF = 255. C = 0 says a borrow happened, but nothing in the loop reads C.'},
