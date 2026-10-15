@@ -398,6 +398,8 @@ svg.nl .sh.u{fill:var(--carry)}
 
   <section class="tut" id="negate">
     <h2>2. Negating: NOT, then add 1</h2>
+    <div class="row"><span>Width</span><button class="small" type="button" data-w="4" aria-pressed="true">4 bits</button><button class="small" type="button" data-w="8" aria-pressed="false">8 bits</button>
+    <span>Load</span><button class="small" type="button" data-preset="4,5,3">5 − 3</button><button class="small" type="button" data-preset="4,3,5">3 − 5</button><button class="small" type="button" data-preset="4,0,1">0 − 1</button><button class="small" type="button" data-preset="4,7,7">7 − 7</button><button class="small" type="button" data-preset="4,8,1">8 − 1</button><button class="small" type="button" data-preset="4,5,10">5 − (−6)</button><button class="small" type="button" data-preset="4,7,15">7 − (−1)</button><button class="small" type="button" data-preset="8,3,5">3 − 5 at 8 bits</button><button class="small" type="button" data-preset="8,128,1">0x80 − 1</button></div>
     <p>Stepping back B places is the same as stepping forward by the wheel's size minus B. At 4 bits, subtracting 5 is adding 11. At 8 bits, subtracting 5 is adding 251. So if the circuit can make 16 − B, or 256 − B, from B, it can subtract with nothing but an adder.</p>
     <p>Inverting every bit of B gives 15 − B at 4 bits (255 − B at 8), because each column that held a 1 now holds a 0 and vice versa, and all-ones is 15. Adding 1 more makes it 16 − B, exactly the number to add. That is the whole trick: <strong>−B = NOT B + 1</strong>.</p>
     <div class="hood" id="neg"></div>
@@ -405,6 +407,8 @@ svg.nl .sh.u{fill:var(--carry)}
 
   <section class="tut" id="subtract">
     <h2>3. The adder does it</h2>
+    <div class="row"><span>Width</span><button class="small" type="button" data-w="4" aria-pressed="true">4 bits</button><button class="small" type="button" data-w="8" aria-pressed="false">8 bits</button>
+    <span>Load</span><button class="small" type="button" data-preset="4,5,3">5 − 3</button><button class="small" type="button" data-preset="4,3,5">3 − 5</button><button class="small" type="button" data-preset="4,0,1">0 − 1</button><button class="small" type="button" data-preset="4,7,7">7 − 7</button><button class="small" type="button" data-preset="4,8,1">8 − 1</button><button class="small" type="button" data-preset="4,5,10">5 − (−6)</button><button class="small" type="button" data-preset="4,7,15">7 − (−1)</button><button class="small" type="button" data-preset="8,3,5">3 − 5 at 8 bits</button><button class="small" type="button" data-preset="8,128,1">0x80 − 1</button></div>
     <p>An adder already has a carry-in on bit 0. Feed NOT B into its B inputs and set that carry-in to 1, and it computes A + NOT B + 1, which is A − B. In hardware the inversion is one XOR gate per bit with a SUB wire on its other input: SUB low passes B through, SUB high inverts it and also drives the carry-in. The same adder adds and subtracts, which is why no CPU has a separate subtractor.</p>
     <p>Tap bits in A or B to change the sum. The carries row shows the 1 entering bit 0 and the carry out leaving the top bit.</p>
     <div class="hood" id="brow"></div>
@@ -414,10 +418,12 @@ svg.nl .sh.u{fill:var(--carry)}
   </section>
 
   <section class="tut" id="paper">
-    <h2>4. The same subtraction on paper</h2>
+    <h2>4. Doing it on paper</h2>
+    <div class="row"><span>Width</span><button class="small" type="button" data-w="4" aria-pressed="true">4 bits</button><button class="small" type="button" data-w="8" aria-pressed="false">8 bits</button>
+    <span>Load</span><button class="small" type="button" data-preset="4,5,3">5 − 3</button><button class="small" type="button" data-preset="4,3,5">3 − 5</button><button class="small" type="button" data-preset="4,0,1">0 − 1</button><button class="small" type="button" data-preset="4,7,7">7 − 7</button><button class="small" type="button" data-preset="4,8,1">8 − 1</button><button class="small" type="button" data-preset="4,5,10">5 − (−6)</button><button class="small" type="button" data-preset="4,7,15">7 − (−1)</button><button class="small" type="button" data-preset="8,3,5">3 − 5 at 8 bits</button><button class="small" type="button" data-preset="8,128,1">0x80 − 1</button></div>
     <p>You do not have to think in bits to get the right pattern. Work in decimal, then fit the answer into the width, then convert with the top bit worth minus its place value. The adder above and this method always agree, because both are arithmetic on a wheel of 2<sup>n</sup> patterns; the method just does the wrap as one explicit step. Two cases at 4 bits, one that fits and one that does not:</p>
     <div class="fixedwrap" id="paperFixed"></div>
-    <p>And the same three steps for the page's own A − B, read as signed. Load <code>7 − (−1)</code> or <code>0x80 − 1</code> above for more wraps.</p>
+    <p>And the same three steps for whichever A − B is loaded, read as signed. Load <code>7 − (−1)</code> or <code>0x80 − 1</code> for more wraps.</p>
     <div class="steps" id="method"></div>
     <p class="tip">On the number line, the grey band above the axis is the signed range and the amber band below it the unsigned range; the ticks mark their ends. The black dot is the true decimal answer; an arrow shows the shift of one wheel size when the answer has to be fitted. Both landings are the same bits.</p>
   </section>
