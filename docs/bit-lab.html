@@ -1333,6 +1333,7 @@ function update(){
   renderOps(); renderCircuit(r); renderValues(r); renderFlags(r); renderWhy(r);
   persist();
 }
+(function(){ try{ const h=new URLSearchParams(location.hash.replace(/^#/,'')); const op=h.get('op'); if(op&&OPS.some(o=>o.id===op)){ state.op=op; const w=Number(h.get('w')); if(w===4||w===8) state.w=w; const M=(1<<state.w)-1; if(h.has('a')) state.a=Number(h.get('a'))&M; if(h.has('b')) state.b=Number(h.get('b'))&M; setTimeout(()=>{ const el=document.getElementById('lab'); if(el) el.scrollIntoView(); },50); } }catch(e){} })();
 update();
 })();
 </script>

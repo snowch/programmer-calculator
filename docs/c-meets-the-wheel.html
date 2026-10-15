@@ -334,7 +334,8 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
 .hflags.chg{background:var(--bit-on);color:var(--bit-on-ink);border-radius:6px;padding:4px 8px}
 .hflags.chg b{color:var(--bit-on-ink)}
 .trace .note{min-height:2.4em}
-.trace .regs .hl{width:36px}
+.trace .regs .hl{width:56px}
+.trace .carries{margin-bottom:2px}
 
 </style>
 </head>
@@ -365,6 +366,7 @@ for (i = n - 1; i >= 0; i--)   // clear a[7] down to a[0]
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s2">
@@ -377,6 +379,7 @@ x = x + 1;</pre>
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s3">
@@ -389,6 +392,7 @@ int8_t x = v;</pre>
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s4">
@@ -401,6 +405,7 @@ int8_t y = -x;   // or abs(x)</pre>
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s5">
@@ -415,6 +420,7 @@ return negative ? -acc : acc;</pre>
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s6">
@@ -428,6 +434,7 @@ if (d > a) /* wrapped */</pre>
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s7">
@@ -441,6 +448,7 @@ printf("%u", x);   // 254</pre>
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s8">
@@ -453,6 +461,7 @@ int8_t q = x / d;   // +128 does not fit</pre>
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s9">
@@ -466,6 +475,7 @@ if (x + 1 > x)
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
   <section class="tut scen" id="s10">
@@ -479,6 +489,7 @@ if (s < a) /* carried */</pre>
       <pre class="work asmprog asm"></pre>
       <div class="hood regs"></div>
       <p class="note"></p>
+      <p class="tip labLink"></p>
     </div>
   </section>
 
@@ -569,7 +580,7 @@ function alu(op,a,b){ // returns {r, n,z,c,v}
   let r,c,v;
   if(op==='add'||op==='sub'){ const bb=op==='sub'?(~b)&M:b, cin=op==='sub'?1:0; let carry=cin; r=0; const cins=[cin];
     for(let i=0;i<8;i++){ const x=bit(a,i), y=bit(bb,i); r|=(x^y^carry)<<i; carry=(x&y)|(carry&(x^y)); cins.push(carry); }
-    c=cins[8]; v=cins[8]^cins[7]; }
+    c=cins[8]; v=cins[8]^cins[7]; return {r:r&M, n:bit(r&M,7), z:(r&M)===0?1:0, c, v, cins, nb:bb}; }
   else if(op==='neg'){ return alu('sub',0,a); }
   else if(op==='mov'){ r=b&M; c=null; v=null; }
   return {r:r&M, n:bit(r&M,7), z:(r&M)===0?1:0, c, v};
@@ -577,12 +588,13 @@ function alu(op,a,b){ // returns {r, n,z,c,v}
 const run=(steps)=>{ // produce frames: state after each step
   const st={R0:0,R1:0,R2:0,R3:0,N:0,Z:0,C:0,V:0}; const frames=[];
   for(const s of steps){ const before={...st}; let changed=[];
+    let arith=null;
     if(s.op==='mov'){ st[s.dst]=s.imm&M; changed=[s.dst]; }
     else if(s.op==='str'){ /* store low byte: narrowing */ st[s.dst]=s.imm&M; changed=[s.dst]; }
     else if(s.op==='sdiv'){ const a=signed(st[s.a]), b=signed(st[s.b]); const q=b===0?0:Math.trunc(a/b); st[s.dst]=q&M; changed=[s.dst]; }
     else if(s.op==='nop'){ changed=[]; }
-    else { const a=st[s.a], b=s.imm!==undefined?s.imm:st[s.b]; const o=alu(s.op,a,b); st[s.dst]=o.r; changed=[s.dst]; if(s.flags!==false){ st.N=o.n; st.Z=o.z; st.C=o.c; st.V=o.v; changed.push('F'); } }
-    frames.push({step:s, before, after:{...st}, changed}); }
+    else { const a=st[s.a], b=s.imm!==undefined?s.imm:st[s.b]; const o=alu(s.op,a,b); st[s.dst]=o.r; changed=[s.dst]; if(s.flags!==false){ st.N=o.n; st.Z=o.z; st.C=o.c; st.V=o.v; changed.push('F'); } arith={op:s.op,a,b,o}; }
+    frames.push({step:s, before, after:{...st}, changed, arith}); }
   return frames;
 };
 const regRow=(name,before,after,changed)=>{ let h=`<div class="hrow"><span class="hl">${name}</span>`; for(let i=7;i>=0;i--){ const v=bit(after,i); const diff=changed&&bit(before,i)!==v; h+=cell(v,((v?'on':'')+(diff?' top':'')).trim()); } return h+`<span class="hv">${hex(after)} = ${after} unsigned, ${signed(after)} signed${changed&&before!==after?` (was ${hex(before)})`:''}</span></div>`; };
@@ -594,7 +606,11 @@ function mount(id, sc){
     let code=''; sc.steps.forEach((s,i)=>{ code+=`<span class="ln${i===k?' run':''}${i<k?' done':''}">${s.asm.padEnd(22)}<span class="cm">; ${s.c||''}</span></span>`; });
     let regs=''; for(const r of sc.regs) regs+=regRow(r, f?f.before[r]:0, st[r], f&&f.changed.includes(r));
     host.querySelector('.asm').innerHTML=code;
-    host.querySelector('.regs').innerHTML=regs+flagRow(st, f&&f.changed.includes('F'));
+    let carries='';
+    if(f&&f.arith&&f.arith.o.cins){ const o=f.arith.o, isSub=f.arith.op!=='add'; let h=`<div class="hrow carries"><span class="hl">carries</span>`+cell(o.cins[8],'c'+(o.cins[8]?' on':'')+' v'); for(let i=7;i>=0;i--) h+=cell(o.cins[i],('c'+(o.cins[i]?' on':'')+(i===7?' v':'')).trim()); carries=h+`<span class="hv">carry into each column${f.arith.op==='sub'?'; bit 0 gets the + 1 of NOT B + 1':f.arith.op==='neg'?'; bit 0 gets the + 1 that completes NOT x + 1':''}. The leftmost pair decide C and V.</span></div>`; }
+    host.querySelector('.regs').innerHTML=carries+regs+flagRow(st, f&&f.changed.includes('F'));
+    const labOp=f&&f.arith?{add:'ADD',sub:'SUB',neg:'NEG'}[f.arith.op]:null;
+    host.querySelector('.labLink').innerHTML=labOp?`<a href="bit-lab.html#op=${labOp}&w=8&a=${f.arith.a}${labOp==='NEG'?'':'&b='+f.arith.b}">See this step as gates in the Bit Lab</a>, with the carries drawn as wires.`:'';
     host.querySelector('.note').innerHTML=f?f.step.note:sc.start;
     host.querySelector('.pos').textContent=k<0?'before the first instruction':`after instruction ${k+1} of ${sc.steps.length}`;
     host.querySelector('.prev').disabled=k<0; host.querySelector('.next').disabled=k>=sc.steps.length-1; };
