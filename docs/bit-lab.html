@@ -477,7 +477,7 @@ ol.trace li{margin:0 0 4px}
     <div class="ex"><h3>5. The V rule</h3>
       <button class="load" data-ex='{"op":"ADD","w":8,"a":128,"b":128}'>Load 0x80 + 0x80</button>
       <p>Look at the two red carries feeding the V gate: carry into bit 7 and carry out of bit 7. Find inputs where both are 1 (V = 0), where only the out is 1, and where only the in is 1. State the rule in words.</p>
-      <details><summary>Answer</summary><p>V = 1 exactly when the carry into the sign bit differs from the carry out of it. Adding two positives that produce a negative (carry in only), or two negatives that produce a positive (carry out only), is overflow. If both carries agree the sign bit is still telling the truth.</p></details></div>
+      <details><summary>Answer</summary><p>V = 1 exactly when the carry into the sign bit differs from the carry out of it. Adding two positives that produce a negative (carry in only), or two negatives that produce a positive (carry out only), is overflow. If both carries agree the sign bit is still telling the truth.</p><p>Why that rule is the same as "the true answer is outside the signed range": the carry out of the top bit is the 256 (or 16) that fell off the end, and the carry into it is what the top column needed for its own sum. If both happen they cancel, and if neither happens nothing was lost, so in both cases the top bit shows the true sign. If exactly one happens, the top bit has been given the opposite sign from the true answer, which can only occur when the true answer did not fit. That is the number-line picture on <a href="adding-to-subtracting.html#paper">From adding to subtracting</a>, seen from inside the adder.</p></details></div>
 
     <div class="ex"><h3>6. Subtraction is addition in disguise</h3>
       <button class="load" data-ex='{"op":"SUB","w":8,"a":5,"b":3}'>Load 5 − 3</button>
@@ -1038,8 +1038,8 @@ function flagText(kind,r){
     case 'V':
       if(r.v===null) return `Overflow only has meaning for signed arithmetic.`;
       return r.v
-        ? `As <strong>signed</strong>, the true answer is outside ${-(1<<(w-1))}…${(1<<(w-1))-1}. The carry into the sign bit (${r.carries[w-1]}) differs from the carry out (${r.carries[w]}), so the sign flipped the wrong way: got ${sr}.`
-        : `As <strong>signed</strong>, the answer ${sr} fits. Carry into and out of the sign bit agree (${r.carries[w-1]} and ${r.carries[w]}), so the sign is trustworthy.`;
+        ? `As <strong>signed</strong>, the true answer is outside ${-(1<<(w-1))}…${(1<<(w-1))-1}. The carry into the sign bit (${r.carries[w-1]}) differs from the carry out (${r.carries[w]}), so the sign flipped the wrong way: got ${sr}. Why those two carries: the carry out is the ${1<<w} that fell off the end, the carry in is what the top column itself needed; when only one of them happened, the top bit was left showing the wrong sign for the true answer, which is the same thing as the answer lying outside the range.`
+        : `As <strong>signed</strong>, the answer ${sr} fits. Carry into and out of the sign bit agree (${r.carries[w-1]} and ${r.carries[w]}), so the sign is trustworthy. Either nothing fell off the end and the top column needed nothing, or both happened and cancelled: the top bit shows the true sign.`;
   }
 }
 
