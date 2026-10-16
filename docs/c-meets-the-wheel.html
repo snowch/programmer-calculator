@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Where C meets the wheel</title>
-<meta name="description" content="Seven C integer traps, each stepped through in ARM assembly with 8-bit registers and the N Z C V flags drawn before and after: the unsigned countdown, 127 + 1, narrowing, negating INT_MIN, parsing it, detecting a wrap, and %d versus %u.">
+<meta name="description" content="Ten C integer traps, each stepped through in ARM assembly with 8-bit registers and the N Z C V flags drawn before and after: the unsigned countdown, 127 + 1, narrowing, negating INT_MIN, parsing it, detecting a wrap, and %d versus %u.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem("bitlab-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
@@ -349,7 +349,7 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
     <div>
       <p class="crumbs"><a href="notes.html" title="From gates to a compiled if: contents">Home</a> · part 4 of 9</p>
       <h1>Where C meets the wheel</h1>
-      <p class="lede">Seven small C programs that go wrong at the edge of the range, stepped through one instruction at a time with the registers drawn as bits before and after, so you can see the wrap the language calls undefined.</p>
+      <p class="lede">Ten small C programs that go wrong at the edge of the range, stepped through one instruction at a time with the registers drawn as bits before and after, so you can see the wrap the language calls undefined.</p>
     </div>
     <button class="small themebtn" id="themeBtn" type="button">theme: auto</button>
   </div>
@@ -359,8 +359,8 @@ nav.pager .up{color:var(--ink-2);border:0;font:.84rem var(--mono)}
   <p class="tip">Every scenario is at 8 bits with <code>int8_t</code> and <code>uint8_t</code>, so every bit is on screen. The same things happen at 32 bits with <code>int</code> and <code>unsigned</code>; the 32-bit numbers are named where they differ. The assembly is ARM. Step through each one and watch the registers and flags; changed bits are outlined, and the C line each instruction came from is highlighted above the listing.</p>
   <section class="tut first scen" id="s1">
     <h2>1. The loop that never ends</h2>
-    <pre class="work csrc"><span class="ln">uint8_t a[8];        // an array of n = 8 elements</span><span class="ln">uint8_t n = 8;</span><span class="ln">uint8_t i;</span><span class="ln">for (i = n - 1; i &gt;= 0; i--)   // clear a[7] down to a[0]</span><span class="ln">    a[i] = 0;</span></pre>
-    <p>Counting down over an array with an unsigned index, from the last element a[n − 1] to the first a[0]. The programmer means "stop after 0", but 0 − 1 under the unsigned reading is 255, and 255 ≥ 0. (Lowercase n is the array length; it has nothing to do with the N flag.)</p>
+    <pre class="work csrc"><span class="ln">uint8_t a[2];        // an array of n = 2 elements</span><span class="ln">uint8_t n = 2;</span><span class="ln">uint8_t i;</span><span class="ln">for (i = n - 1; i &gt;= 0; i--)   // clear a[1], then a[0], then stop</span><span class="ln">    a[i] = 0;</span></pre>
+    <p>Counting down over an array with an unsigned index, from the last element a[n − 1] to the first a[0]. The programmer means "stop after 0", but 0 − 1 under the unsigned reading is 255, and 255 ≥ 0. The listing is a real loop: the branch at the bottom sends the highlight back to the top. (Lowercase n is the array length; it has nothing to do with the N flag.)</p>
     <div class="trace">
       <div class="row ctl"><button class="small prev" type="button">Previous</button><button class="op next" type="button">Next instruction</button><button class="small reset" type="button">Reset</button><span class="pos"></span></div>
       <pre class="work asmprog asm"></pre>
@@ -591,7 +591,8 @@ function mount(id, sc){
   const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const cEl=host.querySelector('.csrc'); const clines=cEl?[...cEl.querySelectorAll('.ln')].map(e=>e.textContent):[];
   const draw=()=>{ const f=k>=0?frames[k]:null; const st=f?f.after:{R0:0,R1:0,R2:0,R3:0,N:0,Z:0,C:0,V:0};
-    let code=''; sc.steps.forEach((s,i)=>{ code+=`<span class="ln${i===k?' run':''}${i<k?' done':''}">${s.asm.padEnd(22)}<span class="cm">; ${s.c||''}</span></span>`; });
+    let code=''; if(sc.lines){ const al=f?[].concat(f.step.al):[]; sc.lines.forEach((l,i)=>{ code+=`<span class="ln${al.includes(i)?' run':''}">${l.asm.padEnd(24)}<span class="cm">; ${l.c||''}</span></span>`; }); }
+    else sc.steps.forEach((s,i)=>{ code+=`<span class="ln${i===k?' run':''}${i<k?' done':''}">${s.asm.padEnd(22)}<span class="cm">; ${s.c||''}</span></span>`; });
     let regs=''; for(const r of sc.regs) regs+=regRow(r, f?f.before[r]:0, st[r], f&&f.changed.includes(r));
     host.querySelector('.asm').innerHTML=code;
     if(cEl){ cEl.classList.toggle('live',!!f); cEl.innerHTML=clines.map((l,i)=>{ const on=!!f&&f.step.cl===i; let t=esc(l); if(on&&f.step.cf){ const p=l.indexOf(f.step.cf); if(p<0) cEl.classList.add('cfmiss'); else t=esc(l.slice(0,p))+'<span class="cf">'+esc(f.step.cf)+'</span>'+esc(l.slice(p+f.step.cf.length)); } return `<span class="ln${on?' run':''}">${t}</span>`; }).join(''); }
@@ -601,7 +602,7 @@ function mount(id, sc){
     const labOp=f&&f.arith?{add:'ADD',sub:'SUB',neg:'NEG'}[f.arith.op]:null;
     host.querySelector('.labLink').innerHTML=labOp?`<a href="bit-lab.html#op=${labOp}&w=8&a=${f.arith.a}${labOp==='NEG'?'':'&b='+f.arith.b}">See this step as gates in the Bit Lab</a>, with the carries drawn as wires.`:'';
     host.querySelector('.note').innerHTML=f?f.step.note:sc.start;
-    host.querySelector('.pos').textContent=k<0?'before the first instruction':`after instruction ${k+1} of ${sc.steps.length}`;
+    host.querySelector('.pos').textContent=k<0?'before the first instruction':`after ${sc.lines?'step':'instruction'} ${k+1} of ${sc.steps.length}`;
     host.querySelector('.prev').disabled=k<0; host.querySelector('.next').disabled=k>=sc.steps.length-1; };
   host.querySelector('.next').addEventListener('click',()=>{ if(k<sc.steps.length-1){ k++; draw(); } });
   host.querySelector('.prev').addEventListener('click',()=>{ if(k>=0){ k--; draw(); } });
@@ -609,11 +610,23 @@ function mount(id, sc){
   draw();
 }
 /* ---- the scenarios ---- */
-mount('s1',{ regs:['R0'], start:'The loop has already run for i = 7 down to i = 0 and cleared every element. R0 holds i = 0 and the decrement is about to execute.',
+mount('s1',{ regs:['R0'], start:'A two-element array, so the whole loop fits on screen. R0 will hold i. R1 holds the 0 to be stored and is not drawn. Step from the very first instruction.',
+  lines:[
+    {asm:'      MOV   R0, #1',c:'i = n - 1'},
+    {asm:'loop: STRB  R1, [a, R0]',c:'a[i] = 0   (R1 is 0)'},
+    {asm:'      SUBS  R0, R0, #1',c:'i--'},
+    {asm:'      CMP   R0, #0',c:'i >= 0 ?'},
+    {asm:'      BHS   loop',c:'unsigned >=: branch if C = 1'},
+  ],
   steps:[
-    {op:'mov',dst:'R0',imm:0,asm:'MOV   R0, #0',c:'uint8_t i = 0',cl:4,note:'R0 holds i = 0, the last index the loop should visit.'},
-    {op:'sub',dst:'R0',a:'R0',imm:1,asm:'SUBS  R0, R0, #1',c:'i--',cl:3,cf:'i--',note:'0 − 1 steps back past zero round the wheel: R0 is now 0xFF = 255. C = 0 says a borrow happened, but nothing in the loop reads C.'},
-    {op:'sub',dst:'R3',a:'R0',imm:0,asm:'CMP   R0, #0',c:'i >= 0 ?',cl:3,cf:'i >= 0',note:'The compiler compares as unsigned, since i is unsigned: 255 ≥ 0 is true (C = 1, no borrow), so the loop runs again with i = 255 and reads 255 elements past the array. In fact most compilers notice that an unsigned value is always ≥ 0 and delete the test entirely, which is the same bug faster.'},
+    {op:'mov',dst:'R0',imm:1,al:0,cl:3,cf:'i = n - 1',note:'i starts at n − 1 = 1, the index of the last element.'},
+    {op:'nop',al:1,cl:4,note:'a[1] = 0. The store writes to memory, not to a register, so nothing drawn here changes.'},
+    {op:'sub',dst:'R0',a:'R0',imm:1,al:2,cl:3,cf:'i--',note:'1 − 1 = 0. Z = 1 says the result is zero, C = 1 says no borrow.'},
+    {op:'sub',dst:'R3',a:'R0',imm:0,al:[3,4],cl:3,cf:'i >= 0',note:'Is 0 ≥ 0? The compiler compares as unsigned, because i is unsigned: 0 − 0 needs no borrow, C = 1, so the branch is taken and the loop goes round again. Correct so far: a[0] still needs clearing.'},
+    {op:'nop',al:1,cl:4,note:'a[0] = 0. Every element is now cleared. This is where the programmer means the loop to stop: one more decrement and the test should fail.'},
+    {op:'sub',dst:'R0',a:'R0',imm:1,al:2,cl:3,cf:'i--',note:'0 − 1 steps back past zero round the wheel: R0 is now 0xFF = 255. C = 0 says a borrow happened, but nothing in the loop reads C here.'},
+    {op:'sub',dst:'R3',a:'R0',imm:0,al:[3,4],cl:3,cf:'i >= 0',note:'Is 255 ≥ 0? Under the unsigned reading, yes: 255 − 0 needs no borrow, C = 1, and the branch is taken. The programmer was thinking of −1, but an unsigned i can never hold it. In fact most compilers notice that an unsigned value is always ≥ 0 and delete the test entirely, which is the same bug faster.'},
+    {op:'nop',al:1,cl:4,note:'a[255] = 0, writing 254 bytes past the end of a two-element array. The loop will carry on down from 255 to 0, wrap again, and never end.'},
   ]});
 mount('s2',{ regs:['R0'], start:'x is 127, the largest int8_t.',
   steps:[
